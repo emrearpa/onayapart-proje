@@ -1,0 +1,770 @@
+// Onay Apart - veri modeli
+// Postgresql kullanilir (Neon, Supabase, Railway vb.). Yerel gelistirmede de ayni
+// baglanti dizesini (DATABASE_URL) kullanmaniz en basit yoldur.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Oda tipi: 1+0, 1+1, 2+1
+model RoomType {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  slug        String   @unique
+  name        String
+  tagline     String
+  description String
+  seoTitle    String
+  seoText     String
+  minM2       Int
+  maxM2       Int
+  capacity    String
+  features    String
+  /// Bu oda tipinin tanitim karti icin temsili fotograf - bos ise gradyan yer tutucu gosterilir.
+  imageUrl    String?
+  sort        Int      @default(0)
+  rooms       Room[]
+  rates       Rate[]
+}
+
+/// Fiziksel daire
+/// Lokantanin menu kategorisi (Corbalar, Ana Yemekler, Icecekler vb.)
+model MenuCategory {
+  id    String     @id @default(cuid())
+  name  String
+  sort  Int        @default(0)
+  items MenuItem[]
+}
+
+/// Bir menu kalemi. isDailySpecial=true olanlar sitede "Gunun Menusu"
+/// basligi altinda, kategorilerin en ustunde ayrica gosterilir.
+model MenuItem {
+  id             String       @id @default(cuid())
+  categoryId     String
+  category       MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  price          Float
+  isAvailable    Boolean      @default(true)
+  isDailySpecial Boolean      @default(false)
+  sort           Int          @default(0)
+  charges        RoomServiceCharge[]
+}
+
+/// Odaya giden yemek/icecek - rezervasyonun toplam tutarina otomatik eklenir,
+/// misafir panelinde ve muhasebede goruntulenebilir bir hesap kalemi olusturur.
+model RoomServiceCharge {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  menuItemId    String?
+  menuItem      MenuItem?   @relation(fields: [menuItemId], references: [id], onDelete: SetNull)
+  name          String
+  unitPrice     Float
+  quantity      Int         @default(1)
+  amount        Float
+  note          String?
+  /// BEKLIYOR | ONAYLANDI | REDDEDILDI - misafirin kendi panelinden verdigi siparisler
+  /// BEKLIYOR olarak baslar ve personel onaylamadan rezervasyon tutarina islenmez.
+  /// Personelin kendi girdigi kayitlar direkt ONAYLANDI olarak olusur.
+  status        String      @default("ONAYLANDI")
+  /// PERSONEL | MISAFIR
+  source        String      @default("PERSONEL")
+  createdAt     DateTime    @default(now())
+
+  @@index([reservationId])
+}
+
+model Room {
+  id           String        @id @default(cuid())
+  number       Int           @unique
+  floor        Int
+  m2           Int
+  beds         String
+  view         String
+  /// Bu dairede secili olan olanaklar (site.ts'teki "icon" degerleri, virgulle ayrilir).
+  /// Bos ise site tum standart olanaklari gosterir (eski/varsayilan daireler icin).
+  amenities    String        @default("")
+  /// MUSAIT | TEMIZLIK | BAKIM (dolu olma durumu rezervasyondan hesaplanir)
+  condition    String        @default("MUSAIT")
+  isPublished  Boolean       @default(true)
+  notes        String?
+  typeId       String
+  type         RoomType      @relation(fields: [typeId], references: [id])
+  photos       Photo[]
+  reservations Reservation[]
+  tasks        Task[]
+  assets       Asset[]
+  externalCalendars ExternalCalendar[]
+  externalBookings  ExternalBooking[]
+  inventoryMovements InventoryMovement[]
+  /// Bu odanin kendi takvimini Booking.com/Airbnb'ye disari verdigi (.ics export) gizli anahtar.
+  icalExportToken   String?       @unique @default(cuid())
+  createdAt    DateTime      @default(now())
+
+  @@index([typeId])
+}
+
+/// Tuketilen stok kalemleri (havlu, nevresim, temizlik malzemesi, mini bar vb.)
+/// Demirbastan (Asset) farki: Asset sabit esyalardir (TV, buzdolabi), bu ise
+/// zamanla azalip tukenip yeniden alinan sarf malzemesidir.
+model InventoryItem {
+  id          String              @id @default(cuid())
+  name        String
+  /// TEMIZLIK | TEKSTIL | MUTFAK | MINIBAR | DIGER
+  category    String              @default("DIGER")
+  unit        String              @default("adet")
+  /// Depo stoğu bu seviyenin altina dusunce "dusuk stok" uyarisi verilir.
+  minQuantity Float               @default(0)
+  note        String?
+  stocks      InventoryStock[]
+  movements   InventoryMovement[]
+  createdAt   DateTime            @default(now())
+}
+
+/// Depo, kat hizmetleri gibi stok konumlari. Ayni kalem her konumda ayri
+/// miktar tutabilir (orn. depoda 40 havlu, kat hizmetlerinde 8 havlu).
+model InventoryLocation {
+  id            String              @id @default(cuid())
+  name          String              @unique
+  /// DEPO | PERSONEL
+  type          String              @default("DEPO")
+  sort          Int                 @default(0)
+  stocks        InventoryStock[]
+  movementsFrom InventoryMovement[] @relation("MovementFrom")
+  movementsTo   InventoryMovement[] @relation("MovementTo")
+  createdAt     DateTime            @default(now())
+}
+
+/// Bir kalemin belirli bir konumdaki guncel miktari.
+model InventoryStock {
+  id         String            @id @default(cuid())
+  itemId     String
+  item       InventoryItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  locationId String
+  location   InventoryLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  quantity   Float             @default(0)
+
+  @@unique([itemId, locationId])
+}
+
+/// Stok hareketi - dogrudan miktar guncellemek yerine hareket bazli tutulur.
+/// GIRIS: disaridan alinip bir konuma (genelde Depo) eklenir.
+/// TRANSFER: bir konumdan digerine tasinir (orn. Depo -> Kat Hizmetleri).
+/// CIKIS: bir konumdan (genelde Kat Hizmetleri) tuketilerek sistemden cikar.
+model InventoryMovement {
+  id             String             @id @default(cuid())
+  itemId         String
+  item           InventoryItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  /// GIRIS | TRANSFER | CIKIS
+  type           String
+  quantity       Float
+  reason         String?
+  roomId         String?
+  room           Room?              @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  fromLocationId String?
+  fromLocation   InventoryLocation? @relation("MovementFrom", fields: [fromLocationId], references: [id], onDelete: SetNull)
+  toLocationId   String?
+  toLocation     InventoryLocation? @relation("MovementTo", fields: [toLocationId], references: [id], onDelete: SetNull)
+  /// Muhasebeden ("Envanter/Stok Alımı" gideri) otomatik olusturulduysa ilgili kayit.
+  transactionId  String?            @unique
+  transaction    Transaction?       @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  createdAt      DateTime           @default(now())
+
+  @@index([itemId])
+}
+
+/// Odada bulunan demirbas (TV, buzdolabi, yatak vb.). Rezervasyon acilirken
+/// sozlesmeye otomatik olarak eklenir.
+model Asset {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  Int      @default(1)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([roomId])
+}
+
+/// Odanin Booking.com/Airbnb gibi harici bir platformdaki .ics takvim adresi.
+/// Duzenli araliklarla bu adresten cekilen "dolu" tarihler ExternalBooking'e yazilir.
+model ExternalCalendar {
+  id            String    @id @default(cuid())
+  roomId        String
+  room          Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  /// BOOKING | AIRBNB | DIGER
+  platform      String
+  importUrl     String
+  lastSyncAt    DateTime?
+  lastSyncOk    Boolean   @default(true)
+  lastSyncError String?
+  createdAt     DateTime  @default(now())
+
+  @@index([roomId])
+}
+
+/// Harici platformdan senkronize edilen "dolu" tarih araligi. Rezervasyon
+/// cakisma kontrolu ve musaitlik gostergesi bunlari da dikkate alir.
+model ExternalBooking {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  /// BOOKING | AIRBNB | DIGER
+  platform    String
+  checkIn     DateTime
+  checkOut    DateTime
+  /// ics dosyasindaki UID - ayni etkinligi tekrar eklememek ve iptal olanlari silmek icin.
+  externalUid String
+  summary     String?
+  createdAt   DateTime @default(now())
+
+  @@unique([roomId, platform, externalUid])
+  @@index([roomId])
+}
+
+model Photo {
+  id     String @id @default(cuid())
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  url    String
+  alt    String
+  sort   Int    @default(0)
+
+  @@index([roomId])
+}
+
+model Guest {
+  id           String        @id @default(cuid())
+  fullName     String
+  phone        String
+  email        String?
+  /// TC | PASAPORT
+  idType       String        @default("TC")
+  idNumber     String?
+  birthDate    DateTime?
+  nationality  String        @default("TR")
+  address      String?
+  /// Bu misafire atanan WiFi bilgisi - musteri panelinde de gorunur.
+  wifiNetwork  String?
+  wifiPassword String?
+  /// Eski kod tabanli giris sisteminden kalma alan - artik kullanilmiyor (giris
+  /// telefon + T.C. kimlik no ile yapiliyor). Geriye donuk uyumluluk icin duruyor.
+  portalCode   String        @default("")
+  note         String?
+  reservations Reservation[]
+  tasks        Task[]
+  messages     MessageLog[]
+  createdAt    DateTime      @default(now())
+
+  @@index([phone])
+}
+
+/// Asil kiraciyla ayni sure boyunca kalan, ekstra ucret odenen ek misafir.
+/// KBS bildirimi acisindan kimlik bilgisi de tutulur. Ucret girilirse
+/// rezervasyonun toplam tutarina otomatik eklenir/cikarilir.
+model ExtraGuest {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  fullName      String
+  /// TC | PASAPORT
+  idType        String      @default("TC")
+  idNumber      String?
+  birthDate     DateTime?
+  nationality   String      @default("T.C.")
+  phone         String?
+  fee           Float       @default(0)
+  note          String?
+  createdAt     DateTime    @default(now())
+
+  @@index([reservationId])
+}
+
+/// Uyumsoft (veya baska bir entegratorden) kesilen e-Arsiv/e-Fatura takibi.
+/// Otomatik SOAP entegrasyonu icin WSDL/entegrasyon dokumani gerekiyor - simdilik
+/// personel Uyumsoft portalinden faturayi kesip numarasini buraya manuel isliyor.
+/// Bir rezervasyona birden fazla fatura talebi olusabilir (ornegin nakit odemenin
+/// sadece bir kismi icin fatura istenmesi) - bu yuzden reservationId artik unique degil.
+/// paymentId doluysa bu talep belirli bir odemeden (genelde nakit) otomatik acilmistir.
+model Invoice {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  paymentId     String?     @unique
+  payment       Payment?    @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  /// BEKLIYOR | KESILDI
+  status        String      @default("BEKLIYOR")
+  invoiceNumber String?
+  amount        Float?
+  issuedAt      DateTime?
+  note          String?
+  createdAt     DateTime    @default(now())
+
+  @@index([reservationId])
+}
+
+model Reservation {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  roomId      String
+  room        Room      @relation(fields: [roomId], references: [id])
+  guestId     String
+  guest       Guest     @relation(fields: [guestId], references: [id])
+  checkIn     DateTime
+  checkOut    DateTime
+  /// GUNLUK | HAFTALIK | AYLIK | DONEMLIK | KURUMSAL
+  stayType    String
+  /// OPSIYON | ONAYLI | GIRIS_YAPTI | TAMAMLANDI | IPTAL
+  status      String    @default("ONAYLI")
+  totalAmount Float     @default(0)
+  deposit     Float     @default(0)
+  kbsReported Boolean   @default(false)
+  notes       String?
+  /// Rezervasyonu alan/isleyen personel - yeni kayitlarda zorunlu (form seviyesinde),
+  /// eski kayitlarda bos olabilecegi icin veritabaninda nullable birakildi.
+  handledByEmployeeId String?
+  handledByEmployee   Employee? @relation(fields: [handledByEmployeeId], references: [id], onDelete: SetNull)
+  /// Kurumsal musteri ise fatura kisiye degil firmaya kesilsin diye.
+  billToCompany   Boolean @default(false)
+  companyName     String?
+  companyTaxNo    String?
+  companyTaxOffice String?
+  companyAddress  String?
+  payments    Payment[]
+  onlinePayments OnlinePaymentAttempt[]
+  extraGuests ExtraGuest[]
+  invoices    Invoice[]
+  roomServiceCharges RoomServiceCharge[]
+  createdAt   DateTime  @default(now())
+
+  @@index([roomId, checkIn, checkOut])
+}
+
+model Payment {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  amount        Float
+  /// NAKIT | KART | HAVALE
+  method        String      @default("NAKIT")
+  accountId     String?
+  account       Account?    @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  paidAt        DateTime    @default(now())
+  note          String?
+  invoice       Invoice?
+
+  @@index([reservationId])
+  @@index([accountId])
+}
+
+/// Oda tipi + konaklama tipine gore fiyat. price = 0 ise sitede "Fiyat icin arayin" gosterilir.
+model Rate {
+  id       String   @id @default(cuid())
+  typeId   String
+  type     RoomType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  stayType String
+  label    String
+  price    Float    @default(0)
+  sort     Int      @default(0)
+
+  @@unique([typeId, stayType])
+}
+
+/// Housekeeping, bakim isleri ve musterilerin kendi panelinden actigi ariza talepleri.
+/// guestId doluysa bu kayit musteri tarafindan olusturulmustur.
+model Task {
+  id        String    @id @default(cuid())
+  roomId    String
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  guestId   String?
+  guest     Guest?    @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  /// TEMIZLIK | BAKIM | ARIZA
+  kind      String
+  title     String
+  message   String?
+  /// ACIK | TAMAMLANDI
+  status    String    @default("ACIK")
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  closedAt  DateTime?
+  notes     TaskNote[]
+
+  @@index([roomId])
+  @@index([guestId])
+}
+
+/// Bir bakim/ariza talebine eklenen not - tespit edilen ariza, yapilan islem vb.
+/// Kalici bir gecmis olusturur; asla silinmez, sadece eklenir.
+model TaskNote {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  note      String
+  /// Bu not, gorevi kapatirken mi eklendi yoksa acikken ilerleme notu olarak mi.
+  kind      String   @default("ILERLEME")
+  authorLabel String @default("Personel")
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+/// Kasa (nakit) veya banka/POS hesabi. Butun para hareketleri bir hesaba baglanir,
+/// boylece her hesabin guncel bakiyesi hesaplanabilir.
+model Account {
+  id             String        @id @default(cuid())
+  name           String
+  /// KASA | BANKA
+  type           String        @default("KASA")
+  openingBalance Float         @default(0)
+  isActive       Boolean       @default(true)
+  sort           Int           @default(0)
+  transactions   Transaction[]
+  payments       Payment[]
+  createdAt      DateTime      @default(now())
+}
+
+/// Personel kaydi. Maas odemeleri Transaction tablosunda GIDER olarak tutulur.
+model Employee {
+  id           String              @id @default(cuid())
+  fullName     String
+  position     String
+  phone        String?
+  email        String?
+  idNumber     String?
+  birthDate    DateTime?
+  address      String?
+  salary       Float               @default(0)
+  /// AKTIF | AYRILDI
+  status       String              @default("AKTIF")
+  startDate    DateTime            @default(now())
+  note         String?
+  transactions Transaction[]
+  documents    EmployeeDocument[]
+  staffUser    StaffUser?
+  handledReservations Reservation[]
+  staffTasks          StaffTask[]
+  createdAt    DateTime            @default(now())
+}
+
+/// Firma evraklari (vergi levhasi, ruhsat, sozlesme, sigorta polices vb.). Personel
+/// ozluk dosyalarindan ayri - bunlar isletmenin kendi resmi belgeleri.
+model CompanyDocument {
+  id         String    @id @default(cuid())
+  title      String
+  /// Serbest metin kategori - "Vergi", "Ruhsat", "Sozlesme" gibi; bos birakilabilir.
+  category   String?
+  filePath   String
+  fileName   String
+  mimeType   String
+  note       String?
+  /// Ruhsat/sozlesme gibi suresi dolabilecek evraklar icin - isteğe bagli.
+  expiresAt  DateTime?
+  uploadedAt DateTime  @default(now())
+}
+
+/// Ozluk dosyasi evraki (kimlik fotokopisi, diploma, saglik raporu, is sozlesmesi vb.).
+/// Dosyalar public/ disinda ozel bir klasorde tutulur, sadece admin girisiyle indirilebilir.
+model EmployeeDocument {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  title      String
+  filePath   String
+  fileName   String
+  mimeType   String
+  uploadedAt DateTime @default(now())
+
+  @@index([employeeId])
+}
+
+/// Panelde sinirli yetkiyle calisan kullanici hesabi (orn. sadece bakim talepleri gorebilen personel).
+/// Tam yetkili admin girisi hala tek sifreyle (.env > PANEL_PASSWORD) calisir, bu tabloya girmez.
+model StaffUser {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  passwordSalt String
+  fullName     String
+  /// Izin verilen panel bolumleri, virgulle ayrilmis anahtarlar:
+  /// rezervasyonlar,musteriler,muhasebe,personel,bakim,odalar,icerik,talepler
+  permissions  String    @default("")
+  isActive     Boolean   @default(true)
+  employeeId   String?   @unique
+  employee     Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+/// On muhasebe defteri: personel maasi, fatura, kira, bakim gibi tum gelir/gider
+/// kayitlari. Misafir konaklama tahsilatlari ayrica Payment tablosunda tutulur;
+/// raporlarda ikisi birlikte toplanir.
+model Transaction {
+  id         String    @id @default(cuid())
+  /// GELIR | GIDER
+  type       String
+  /// Gider: PERSONEL | FATURA | KIRA | BAKIM | MALZEME | VERGI | DIGER
+  /// Gelir: KONAKLAMA_DISI | DIGER
+  category   String
+  title      String
+  amount     Float
+  date       DateTime  @default(now())
+  /// NAKIT | KART | HAVALE
+  method     String    @default("NAKIT")
+  accountId  String
+  account    Account   @relation(fields: [accountId], references: [id])
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  note       String?
+  createdAt  DateTime  @default(now())
+  inventoryMovement InventoryMovement?
+
+  @@index([accountId])
+  @@index([date])
+}
+
+/// Siteden gelen rezervasyon/bilgi talepleri
+model Lead {
+  id         String   @id @default(cuid())
+  name       String
+  phone      String
+  message    String?
+  roomNumber Int?
+  source     String   @default("web")
+  handled    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+/// Isletme iletisim bilgileri ve ana sayfa metni. Tek satirlik (singleton) tablo, id her zaman "main".
+model SiteSetting {
+  id                String   @id @default("main")
+  phoneDisplay      String
+  phoneHref         String
+  whatsapp          String
+  addressStreet     String
+  addressDistrict   String
+  addressCity       String
+  addressPostalCode String
+  heroEyebrow       String
+  heroTitle         String
+  heroIntro         String
+  /// Ana sayfa hero bolumundeki bina dis cephe fotografi - bos ise yer tutucu gosterilir.
+  heroImageUrl      String?
+  /// Restoran/menu bolumu sitede gorunsun mu - firma restoranı yoksa kapatabilir.
+  menuEnabled       Boolean  @default(false)
+  /// Bu sitede acik olan diller, virgullu kod listesi (orn. "en,ar,fa,ru"). Bos ise
+  /// varsayilan 4 dil (en,ar,fa,ru) acik sayilir - bkz. parseEnabledLocales().
+  enabledLocales    String   @default("en,ar,fa,ru")
+  updatedAt         DateTime @updatedAt
+}
+
+/// "Dairede neler var?" bolumunde secilebilecek olanaklarin ana listesi.
+/// icon alani, Room.amenities icindeki secimlerle eslesen sabit anahtardir; silinse/eklense de mevcut secimler bozulmaz.
+model Amenity {
+  id    String @id @default(cuid())
+  icon  String @unique
+  label String
+  sort  Int    @default(0)
+}
+
+/// Genel amacli cok dilli ceviri tablosu. Her icerik tipine (RoomType, Room, Faq,
+/// Amenity, MenuItem, MenuCategory, SiteSetting) ayri kolon eklemek yerine tek bir
+/// esnek yapi: modelName+recordId+fieldName+locale kombinasyonu benzersizdir.
+/// recordId "main" gibi tekil ayarlar icin sabit bir deger de olabilir.
+model Translation {
+  id        String   @id @default(cuid())
+  modelName String
+  recordId  String
+  fieldName String
+  /// en | ar | fa | ru
+  locale    String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@unique([modelName, recordId, fieldName, locale])
+  @@index([modelName, recordId])
+}
+
+/// Site geneli sikca sorulan sorular. homepage=true olanlar ana sayfada da gosterilir, /sss sayfasi hepsini gosterir.
+model Faq {
+  id       String  @id @default(cuid())
+  question String
+  answer   String
+  sort     Int     @default(0)
+  homepage Boolean @default(true)
+}
+
+/// Google Haritalar/Yorumlar'dan personelin elle secip kopyaladigi gercek musteri
+/// yorumlari - API baglantisi yok, kasitli olarak; boylece hicbir zaman bozulmaz
+/// ve sadece gercekten gosterilmek istenen (genelde 5 yildizli) yorumlar sitede cikar.
+model Testimonial {
+  id          String   @id @default(cuid())
+  authorName  String
+  rating      Int      @default(5)
+  text        String
+  isPublished Boolean  @default(true)
+  sort        Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+/// WhatsApp bilgilendirme mesaji sablonu. Metin icinde {ad} {oda} {tutar} {tarih} {kod}
+/// yer tutucular kullanilir, gonderim aninda gercek degerlerle degistirilir.
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  body      String
+  isActive  Boolean  @default(true)
+  sort      Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+/// Gonderilen (veya link olarak hazirlanan) her mesajin kaydi.
+/// Ayni odeme hatirlatmasinin ayni ay iki kez gitmesini engellemek icin de kullanilir.
+model MessageLog {
+  id            String   @id @default(cuid())
+  guestId       String?
+  guest         Guest?   @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  reservationId String?
+  phone         String
+  body          String
+  /// MANUEL | TOPLU | ODEME_HATIRLATMA
+  kind          String   @default("MANUEL")
+  /// GONDERILDI | LINK_HAZIRLANDI | HATA
+  status        String   @default("LINK_HAZIRLANDI")
+  errorMessage  String?
+  /// Otomatik hatirlatmalarda mukerrer gonderimi engellemek icin "2026-09" gibi donem anahtari
+  periodKey     String?
+  sentAt        DateTime @default(now())
+
+  @@index([guestId])
+  @@index([periodKey])
+}
+
+/// WhatsApp Business API ve iyzico odeme baglanti ayarlari. Her ikisi de
+/// ayri ayri acilip kapatilabilir - bos/kapali birakilirsa ilgili ozellik
+/// devre disi kalir, sistemin geri kalani calismaya devam eder.
+model IntegrationSetting {
+  id                   String   @id @default("main")
+  waEnabled            Boolean  @default(false)
+  waPhoneNumberId      String   @default("")
+  waAccessToken        String   @default("")
+  autoRemindersEnabled Boolean  @default(false)
+  /// iyzico online odeme entegrasyonu - firma istedigi an acip kapatabilir.
+  iyzicoEnabled        Boolean  @default(false)
+  iyzicoSandbox        Boolean  @default(true)
+  iyzicoApiKey         String   @default("")
+  iyzicoSecretKey      String   @default("")
+  /// Online odemelerin dusecegi varsayilan kasa/banka hesabi (Account.id).
+  iyzicoDefaultAccountId String?
+  /// E-posta bildirimi (Resend API) - acik/kapali.
+  emailEnabled         Boolean  @default(false)
+  emailApiKey          String   @default("")
+  emailFrom            String   @default("")
+  /// SMS bildirimi (NetGSM REST v2) - acik/kapali.
+  smsEnabled           Boolean  @default(false)
+  smsUserCode          String   @default("")
+  smsPassword          String   @default("")
+  smsHeader            String   @default("")
+  /// TGA (Turizm Gelistirme Ajansi) aylik istatistik bildirimi - 2026/1 sayili
+  /// Genelge ile zorunlu. Gercek, herkese acik bir REST API kullanir.
+  tgaEnabled           Boolean  @default(false)
+  tgaSandbox           Boolean  @default(true)
+  tgaApiKey            String   @default("")
+  /// Tesisin bu sistemdeki sabit UUID'si - TGA'ya anonim kimlik olarak gonderilir.
+  tgaFacilityId        String   @default("")
+  tgaIlKodu            String   @default("25")
+  tgaIlceKodu          String   @default("2045")
+  tgaOdaSayisi         Int      @default(0)
+  tgaYatakSayisi       Int      @default(0)
+  updatedAt            DateTime @updatedAt
+}
+
+/// TGA'ya gonderilen aylik istatistik raporlarinin kaydi. Ayni doneme tekrar
+/// gonderim, TGA tarafinda oncekinin yerine gecer (TGA'nin kendi kurali).
+model TgaSubmission {
+  id           String    @id @default(cuid())
+  reportMonth  String    @unique // "YYYY-MM"
+  /// BEKLIYOR | GONDERILDI | HATA
+  status       String    @default("BEKLIYOR")
+  requestId    String?
+  errorMessage String?
+  payload      String?
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+/// Kurum ici is/talimat takibi - "muduriyet notu" gibi dusunun. Bir yonetici bir
+/// personele (ya da genel olarak) bir talimat/not birakir, ilgili personel bunu
+/// gorup yanit yazabilir ve durumunu guncelleyebilir. Oda/rezervasyonla ilgili
+/// bakim-onarim islerinden AYRI - bu genel kurum ici gorev takibi icin.
+model StaffTask {
+  id             String   @id @default(cuid())
+  title          String
+  message        String
+  assignedToId   String?
+  assignedTo     Employee? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdByLabel String
+  dueDate        DateTime?
+  /// ACIK | DEVAM_EDIYOR | TAMAMLANDI
+  status         String   @default("ACIK")
+  createdAt      DateTime @default(now())
+  replies        StaffTaskReply[]
+
+  @@index([assignedToId])
+}
+
+model StaffTaskReply {
+  id          String    @id @default(cuid())
+  taskId      String
+  task        StaffTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorLabel String
+  message     String
+  createdAt   DateTime  @default(now())
+
+  @@index([taskId])
+}
+
+/// Panelde yapilan onemli degisikliklerin kaydi - kim, ne zaman, ne yapti.
+/// Tum islemler degil, para/yetki/fiyat/rezervasyon gibi hassas olanlar tutulur.
+model ActivityLog {
+  id         String   @id @default(cuid())
+  /// ADMIN | STAFF
+  actorType  String
+  actorLabel String
+  action     String
+  details    String?
+  /// Belirli bir rezervasyonla ilgiliyse - musteri giris-cikis arasi kim ne yapti
+  /// diye rezervasyon bazli filtrelenebilsin diye.
+  reservationId String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([reservationId])
+}
+
+/// Musteri panelinden baslatilan bir iyzico odeme denemesi. Callback geldiginde
+/// token ile eslestirilip dogrulanir, basarili ise Payment kaydi olusturulur.
+/// Ayni token'in iki kez islenmesini (cift tahsilat) engellemek icin tutulur.
+model OnlinePaymentAttempt {
+  id             String      @id @default(cuid())
+  reservationId  String
+  reservation    Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  token          String      @unique
+  conversationId String
+  amount         Float
+  /// BEKLIYOR | BASARILI | BASARISIZ
+  status         String      @default("BEKLIYOR")
+  iyzicoPaymentId String?
+  errorMessage   String?
+  createdAt      DateTime    @default(now())
+  completedAt    DateTime?
+
+  @@index([reservationId])
+}
