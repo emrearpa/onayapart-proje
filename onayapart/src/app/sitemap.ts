@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
-import { site } from "@/lib/site";
-import { prisma } from "@/lib/db";
-import { parseEnabledLocales } from "@/lib/i18n/config";
+import { site } from "@/shared/lib/site";
+import { prisma } from "@/shared/lib/db";
+import { parseEnabledLocales } from "@/shared/i18n/config";
 
 export const revalidate = 3600;
 

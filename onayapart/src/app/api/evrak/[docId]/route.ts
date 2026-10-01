@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { readFile } from "fs/promises";
 import path from "path";
-import { prisma } from "@/lib/db";
-import { verifyStaffSessionToken, permissionForPath } from "@/lib/staffAuth";
+import { prisma } from "@/shared/lib/db";
+import { verifyStaffSessionToken } from "@/features/auth/session";
+import { permissionForPath } from "@/features/auth/permissions";
 
 /**
  * Firma evraki indirme. Panele giren, "Firma Evraklari" yetkisi olan herkes

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/shared/lib/db";
 
 /**
  * Firma evrakinin DISARIYA (WhatsApp/e-posta ile) paylasilan linki - panel girisi

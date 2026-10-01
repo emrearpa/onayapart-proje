@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { getAccounts, getFinanceTotals, getRecentLedger } from "@/lib/queries";
-import { getIntegrationSettings } from "@/lib/iyzico";
-import { fmtMoney, fmtDate } from "@/lib/dates";
-import StatCard from "@/components/panel/StatCard";
-import MuhasebeNav from "@/components/panel/MuhasebeNav";
-import { createAccount, updateIyzicoSettings } from "./actions";
+import { getAccounts, getFinanceTotals, getRecentLedger } from "@/features/accounting/queries";
+import { getIntegrationSettings } from "@/features/integrations/settings";
+import { fmtMoney, fmtDate } from "@/shared/lib/dates";
+import StatCard from "@/shared/components/panel/StatCard";
+import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
+import { createAccount, updateIyzicoSettings } from "@/features/accounting/actions";
 
 export const dynamic = "force-dynamic";
 

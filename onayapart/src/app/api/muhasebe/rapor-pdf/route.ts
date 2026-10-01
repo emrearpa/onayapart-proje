@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import {
-  getFinanceTotals,
-  getExpenseByCategory,
-  getIncomeByMethod,
-  getAccountSummaries,
-  getMonthlyProfitLoss,
-} from "@/lib/queries";
-import { resolveRange } from "@/lib/dateRange";
-import { generateReportPdf } from "@/lib/reportPdf";
+import { getFinanceTotals, getExpenseByCategory, getIncomeByMethod, getAccountSummaries, getMonthlyProfitLoss } from "@/features/accounting/queries";
+import { resolveRange } from "@/features/accounting/date-range";
+import { generateReportPdf } from "@/features/accounting/report-pdf";
 
 /** Muhasebe rapor PDF'i - sadece tam admin girisiyle indirilebilir. */
 export async function GET(req: Request) {

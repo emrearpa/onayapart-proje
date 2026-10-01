@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/db";
-import { fmtDate } from "@/lib/dates";
-import StatCard from "@/components/panel/StatCard";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate } from "@/shared/lib/dates";
+import StatCard from "@/shared/components/panel/StatCard";
 
 export const dynamic = "force-dynamic";
 

@@ -1,14 +1,16 @@
 import Link from "next/link";
 import Image from "next/image";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import FloatingCta from "@/components/FloatingCta";
-import TypeCards from "@/components/TypeCards";
-import RoomCard from "@/components/RoomCard";
-import JsonLd from "@/components/JsonLd";
-import { getRoomTypes, getRooms, getSiteSettings, getAmenities, getFaqs, getMenu, getTestimonials } from "@/lib/queries";
-import { fullAddress, mapsLink } from "@/lib/site";
-import { fmtMoney } from "@/lib/dates";
+import Header from "@/shared/components/Header";
+import Footer from "@/shared/components/Footer";
+import FloatingCta from "@/shared/components/FloatingCta";
+import TypeCards from "@/features/rooms/components/TypeCards";
+import RoomCard from "@/features/rooms/components/RoomCard";
+import JsonLd from "@/shared/components/JsonLd";
+import { getRoomTypes, getRooms, getAmenities } from "@/features/rooms/queries";
+import { getSiteSettings, getFaqs, getTestimonials } from "@/features/content/queries";
+import { getMenu } from "@/features/menu/queries";
+import { fullAddress, mapsLink } from "@/shared/lib/site";
+import { fmtMoney } from "@/shared/lib/dates";
 
 export const revalidate = 300;
 

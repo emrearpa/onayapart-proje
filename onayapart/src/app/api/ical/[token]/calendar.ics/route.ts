@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { buildRoomExportIcs } from "@/lib/calendarSync";
+import { prisma } from "@/shared/lib/db";
+import { buildRoomExportIcs } from "@/features/calendar-sync/sync";
 
 /**
  * Bir odanin kendi rezervasyon takvimini .ics olarak disari verir.

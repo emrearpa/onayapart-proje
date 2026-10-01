@@ -1,8 +1,8 @@
-import { prisma } from "@/lib/db";
-import { fmtMoney, fmtDate } from "@/lib/dates";
-import { computeMonthlyStats, tgaPayloadPreview } from "@/lib/tga";
-import MuhasebeNav from "@/components/panel/MuhasebeNav";
-import { updateTgaSettings, sendTgaReportAction } from "./actions";
+import { prisma } from "@/shared/lib/db";
+import { fmtMoney, fmtDate } from "@/shared/lib/dates";
+import { computeMonthlyStats, tgaPayloadPreview } from "@/features/accounting/tga";
+import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
+import { updateTgaSettings, sendTgaReportAction } from "@/features/accounting/tga-actions";
 
 export const dynamic = "force-dynamic";
 

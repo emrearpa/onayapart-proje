@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/db";
-import { getAccounts } from "@/lib/queries";
-import { fmtDate, fmtMoney, toInputDate } from "@/lib/dates";
-import { createEmployee, updateEmployeeStatus, paySalary } from "./actions";
-import SearchBox from "@/components/panel/SearchBox";
+import { prisma } from "@/shared/lib/db";
+import { getAccounts } from "@/features/accounting/queries";
+import { fmtDate, fmtMoney, toInputDate } from "@/shared/lib/dates";
+import { createEmployee, updateEmployeeStatus, paySalary } from "@/features/staff/actions";
+import SearchBox from "@/shared/components/panel/SearchBox";
 
 export const dynamic = "force-dynamic";
 

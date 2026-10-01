@@ -1,9 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/db";
-import { fmtDate, fmtMoney, toInputDate } from "@/lib/dates";
-import { PERMISSIONS } from "@/lib/staffAuth";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate, fmtMoney, toInputDate } from "@/shared/lib/dates";
+import { PERMISSIONS } from "@/features/auth/permissions";
 import {
   updateEmployeeProfile,
   uploadEmployeeDocument,
@@ -12,7 +12,7 @@ import {
   updateStaffUserPermissions,
   resetStaffUserPassword,
   toggleStaffUserActive,
-} from "../actions";
+} from "@/features/staff/actions";
 
 export const dynamic = "force-dynamic";
 

@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import FloatingCta from "@/components/FloatingCta";
-import Gallery from "@/components/Gallery";
-import LeadForm from "@/components/LeadForm";
-import StatusBadge from "@/components/StatusBadge";
-import JsonLd from "@/components/JsonLd";
-import { placeholder } from "@/components/RoomPhoto";
-import { getRoom, availabilityOf, availabilityLabel, getSiteSettings, getAmenities } from "@/lib/queries";
-import { prisma } from "@/lib/db";
-import { fmtMoney } from "@/lib/dates";
-import { site, waLink } from "@/lib/site";
-import { hreflangAlternates } from "@/lib/i18n/config";
+import Header from "@/shared/components/Header";
+import Footer from "@/shared/components/Footer";
+import FloatingCta from "@/shared/components/FloatingCta";
+import Gallery from "@/features/rooms/components/Gallery";
+import LeadForm from "@/features/leads/components/LeadForm";
+import StatusBadge from "@/features/rooms/components/StatusBadge";
+import JsonLd from "@/shared/components/JsonLd";
+import { placeholder } from "@/features/rooms/components/RoomPhoto";
+import { getRoom, getAmenities } from "@/features/rooms/queries";
+import { availabilityOf, availabilityLabel } from "@/features/rooms/availability";
+import { getSiteSettings } from "@/features/content/queries";
+import { prisma } from "@/shared/lib/db";
+import { fmtMoney } from "@/shared/lib/dates";
+import { site, waLink } from "@/shared/lib/site";
+import { hreflangAlternates } from "@/shared/i18n/config";
 
 export const revalidate = 300;
 

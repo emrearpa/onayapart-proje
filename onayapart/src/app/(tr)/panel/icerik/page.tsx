@@ -1,22 +1,10 @@
-import { prisma } from "@/lib/db";
-import { getSiteSettings } from "@/lib/queries";
-import { getRecordTranslations, getBatchRecordTranslations } from "@/lib/translations";
-import { locales, localeConfig, parseEnabledLocales } from "@/lib/i18n/config";
-import ConfirmButton from "@/components/ConfirmButton";
-import TranslationFields from "@/components/panel/TranslationFields";
-import {
-  updateSiteSettings,
-  updateEnabledLocales,
-  createAmenity,
-  updateAmenity,
-  deleteAmenity,
-  createFaq,
-  updateFaq,
-  deleteFaq,
-  createTestimonial,
-  updateTestimonial,
-  deleteTestimonial,
-} from "../actions";
+import { prisma } from "@/shared/lib/db";
+import { getSiteSettings } from "@/features/content/queries";
+import { getRecordTranslations, getBatchRecordTranslations } from "@/features/content/translations";
+import { locales, localeConfig, parseEnabledLocales } from "@/shared/i18n/config";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import TranslationFields from "@/features/content/components/TranslationFields";
+import { updateSiteSettings, updateEnabledLocales, createAmenity, updateAmenity, deleteAmenity, createFaq, updateFaq, deleteFaq, createTestimonial, updateTestimonial, deleteTestimonial } from "@/features/content/actions";
 
 export const dynamic = "force-dynamic";
 

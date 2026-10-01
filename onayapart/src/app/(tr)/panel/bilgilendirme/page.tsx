@@ -1,8 +1,8 @@
-import { prisma } from "@/lib/db";
-import { getRemindableCustomers } from "@/lib/queries";
-import { getIntegrationSettings } from "@/lib/whatsapp";
-import { fmtDate, fmtMoney } from "@/lib/dates";
-import ConfirmButton from "@/components/ConfirmButton";
+import { prisma } from "@/shared/lib/db";
+import { getRemindableCustomers } from "@/features/reservations/queries";
+import { getIntegrationSettings } from "@/features/integrations/settings";
+import { fmtDate, fmtMoney } from "@/shared/lib/dates";
+import ConfirmButton from "@/shared/components/ConfirmButton";
 import {
   updateTemplate,
   createTemplate,
@@ -14,7 +14,7 @@ import {
   sendSingleSms,
   sendBulkMessage,
   sendPaymentReminders,
-} from "./actions";
+} from "@/features/messaging/actions";
 
 export const dynamic = "force-dynamic";
 

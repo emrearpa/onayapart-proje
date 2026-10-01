@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { readFile } from "fs/promises";
 import path from "path";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/shared/lib/db";
 
 /**
  * Personel ozluk evraki indirme. Kimlik, saglik raporu gibi hassas kisisel veriler

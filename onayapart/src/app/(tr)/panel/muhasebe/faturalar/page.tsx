@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/db";
-import { fmtDate, fmtMoney } from "@/lib/dates";
-import StatCard from "@/components/panel/StatCard";
-import MuhasebeNav from "@/components/panel/MuhasebeNav";
-import SearchBox from "@/components/panel/SearchBox";
-import { markInvoiceIssued, markInvoicePending, createManualInvoiceRequest } from "../actions";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate, fmtMoney } from "@/shared/lib/dates";
+import StatCard from "@/shared/components/panel/StatCard";
+import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
+import SearchBox from "@/shared/components/panel/SearchBox";
+import { markInvoiceIssued, markInvoicePending, createManualInvoiceRequest } from "@/features/accounting/actions";
 
 export const dynamic = "force-dynamic";
 

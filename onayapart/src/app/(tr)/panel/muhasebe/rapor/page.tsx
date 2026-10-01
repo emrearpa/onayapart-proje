@@ -1,21 +1,14 @@
 import Link from "next/link";
-import {
-  getFinanceTotals,
-  getExpenseByCategory,
-  getIncomeByMethod,
-  getAccountSummaries,
-  getMonthlyProfitLoss,
-  getLedgerInRange,
-} from "@/lib/queries";
-import { resolveRange, RANGE_PRESETS } from "@/lib/dateRange";
-import { fmtMoney, fmtDate, toInputDate } from "@/lib/dates";
-import ConfirmButton from "@/components/ConfirmButton";
-import StatCard from "@/components/panel/StatCard";
-import MuhasebeNav from "@/components/panel/MuhasebeNav";
-import MonthlyBarChart from "@/components/panel/charts/MonthlyBarChart";
-import ExpenseDonut from "@/components/panel/charts/ExpenseDonut";
-import MethodBars from "@/components/panel/charts/MethodBars";
-import { deleteTransaction } from "../actions";
+import { getFinanceTotals, getExpenseByCategory, getIncomeByMethod, getAccountSummaries, getMonthlyProfitLoss, getLedgerInRange } from "@/features/accounting/queries";
+import { resolveRange, RANGE_PRESETS } from "@/features/accounting/date-range";
+import { fmtMoney, fmtDate, toInputDate } from "@/shared/lib/dates";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import StatCard from "@/shared/components/panel/StatCard";
+import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
+import MonthlyBarChart from "@/features/accounting/components/charts/MonthlyBarChart";
+import ExpenseDonut from "@/features/accounting/components/charts/ExpenseDonut";
+import MethodBars from "@/features/accounting/components/charts/MethodBars";
+import { deleteTransaction } from "@/features/accounting/actions";
 
 export const dynamic = "force-dynamic";
 

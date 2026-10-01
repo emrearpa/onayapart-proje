@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { getAmenities } from "@/lib/queries";
-import { setRoomCondition, setRoomPublished, setRate, createRoom, syncAllCalendars, sendRoomInfoWhatsapp, deleteRoom } from "../actions";
-import SearchBox from "@/components/panel/SearchBox";
-import ConfirmButton from "@/components/ConfirmButton";
+import { prisma } from "@/shared/lib/db";
+import { getAmenities } from "@/features/rooms/queries";
+import { setRoomCondition, setRoomPublished, setRate, createRoom, sendRoomInfoWhatsapp, deleteRoom } from "@/features/rooms/actions";
+import { syncAllCalendars } from "@/features/calendar-sync/actions";
+import SearchBox from "@/shared/components/panel/SearchBox";
+import ConfirmButton from "@/shared/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
 

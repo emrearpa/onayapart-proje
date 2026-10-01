@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { fmtDate, fmtMoney } from "@/lib/dates";
-import { createGuestRequest, startOnlinePayment, createGuestRoomServiceOrder } from "./actions";
-import { getIntegrationSettings } from "@/lib/iyzico";
-import { getMenu } from "@/lib/queries";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate, fmtMoney } from "@/shared/lib/dates";
+import { createGuestRequest, startOnlinePayment, createGuestRoomServiceOrder } from "@/features/guests/portal-actions";
+import { getIntegrationSettings } from "@/features/integrations/settings";
+import { getMenu } from "@/features/menu/queries";
 
 export const dynamic = "force-dynamic";
 

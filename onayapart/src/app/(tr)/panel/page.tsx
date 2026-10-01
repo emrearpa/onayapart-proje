@@ -1,13 +1,18 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { getDashboard, buildCalendar, getUpcomingPayments, getDailyRevenue, availabilityOf, availabilityLabel } from "@/lib/queries";
-import StatusBadge from "@/components/StatusBadge";
-import { fmtMoney, fmtDate } from "@/lib/dates";
-import { toggleKbs, closeTask, sendRoomInfoWhatsapp } from "./actions";
-import StatCard from "@/components/panel/StatCard";
-import Icon from "@/components/panel/Icon";
-import RevenueTrendChart from "@/components/panel/charts/RevenueTrendChart";
-import DraggableCalendar from "@/components/panel/DraggableCalendar";
+import { prisma } from "@/shared/lib/db";
+import { getDashboard, buildCalendar } from "@/features/dashboard/queries";
+import { getUpcomingPayments } from "@/features/reservations/queries";
+import { getDailyRevenue } from "@/features/accounting/queries";
+import { availabilityOf, availabilityLabel } from "@/features/rooms/availability";
+import StatusBadge from "@/features/rooms/components/StatusBadge";
+import { fmtMoney, fmtDate } from "@/shared/lib/dates";
+import { toggleKbs } from "@/features/reservations/actions";
+import { closeTask } from "@/features/maintenance/actions";
+import { sendRoomInfoWhatsapp } from "@/features/rooms/actions";
+import StatCard from "@/shared/components/panel/StatCard";
+import Icon from "@/shared/components/panel/Icon";
+import RevenueTrendChart from "@/features/accounting/components/charts/RevenueTrendChart";
+import DraggableCalendar from "@/features/reservations/components/DraggableCalendar";
 
 export const dynamic = "force-dynamic";
 

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import FloatingCta from "@/components/FloatingCta";
-import LeadForm from "@/components/LeadForm";
-import { fullAddress, mapsLink } from "@/lib/site";
-import { getSiteSettings } from "@/lib/queries";
-import { hreflangAlternates } from "@/lib/i18n/config";
+import Header from "@/shared/components/Header";
+import Footer from "@/shared/components/Footer";
+import FloatingCta from "@/shared/components/FloatingCta";
+import LeadForm from "@/features/leads/components/LeadForm";
+import { fullAddress, mapsLink } from "@/shared/lib/site";
+import { getSiteSettings } from "@/features/content/queries";
+import { hreflangAlternates } from "@/shared/i18n/config";
 
 export const metadata: Metadata = {
   title: "İletişim — Onay Apart Rezidans Erzurum",

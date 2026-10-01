@@ -1,9 +1,11 @@
-import { getAccounts, expenseCategories, incomeCategories, getRecentLedger, getInventoryItemsWithStock } from "@/lib/queries";
-import { fmtMoney, fmtDate, toInputDate } from "@/lib/dates";
-import ConfirmButton from "@/components/ConfirmButton";
-import MuhasebeNav from "@/components/panel/MuhasebeNav";
-import CategoryWithInventoryFields from "@/components/panel/CategoryWithInventoryFields";
-import { createTransaction, deleteTransaction } from "../actions";
+import { getAccounts, getRecentLedger } from "@/features/accounting/queries";
+import { expenseCategories, incomeCategories } from "@/features/accounting/constants";
+import { getInventoryItemsWithStock } from "@/features/inventory/queries";
+import { fmtMoney, fmtDate, toInputDate } from "@/shared/lib/dates";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
+import CategoryWithInventoryFields from "@/features/accounting/components/CategoryWithInventoryFields";
+import { createTransaction, deleteTransaction } from "@/features/accounting/actions";
 
 export const dynamic = "force-dynamic";
 

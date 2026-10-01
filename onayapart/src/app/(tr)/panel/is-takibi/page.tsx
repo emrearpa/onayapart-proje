@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
-import { fmtDate } from "@/lib/dates";
-import StatCard from "@/components/panel/StatCard";
-import { createStaffTask, addStaffTaskReply, updateStaffTaskStatus } from "./actions";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate } from "@/shared/lib/dates";
+import StatCard from "@/shared/components/panel/StatCard";
+import { createStaffTask, addStaffTaskReply, updateStaffTaskStatus } from "@/features/staff/task-actions";
 
 export const dynamic = "force-dynamic";
 

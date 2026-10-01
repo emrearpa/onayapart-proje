@@ -1,46 +1,47 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyStaffSessionToken, permissionForPath, pathForPermission } from "@/lib/staffAuth";
+import { SESSION_COOKIES, verifySessionToken } from "@/features/auth/session";
+import { PANEL_LOGIN_PATH, permissionForPath, pathForPermission } from "@/features/auth/permissions";
 
-/** /panel ve /musteri altindaki sayfalar kendi oturumlariyla korunur. */
+const GUEST_LOGIN_PATH = "/musteri/giris";
+
+function redirectTo(req: NextRequest, pathname: string) {
+  const url = req.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
+/**
+ * /panel ve /musteri altindaki sayfalarin ilk savunma hatti. Burada yalnizca
+ * imzali token dogrulanir (Edge'de veritabani yok); asil yetki kontrolu sayfa
+ * ve server action'larda `features/auth/guards` ile tekrar yapilir.
+ */
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (pathname.startsWith("/panel") && !pathname.startsWith("/panel/giris")) {
-    const panelCookie = req.cookies.get("oa_panel")?.value;
-    const isFullAdmin =
-      Boolean(panelCookie) && Boolean(process.env.PANEL_PASSWORD) && panelCookie === process.env.PANEL_PASSWORD;
+  if (pathname.startsWith("/panel")) {
+    if (pathname === PANEL_LOGIN_PATH) return NextResponse.next();
 
-    if (isFullAdmin) return NextResponse.next();
-
-    // Tam admin degil: sinirli yetkili personel oturumuna bak.
-    const staffToken = req.cookies.get("oa_staff")?.value;
-    const session = await verifyStaffSessionToken(process.env.PANEL_PASSWORD ?? "", staffToken);
-
-    if (!session) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/panel/giris";
-      return NextResponse.redirect(url);
+    if (await verifySessionToken("admin", req.cookies.get(SESSION_COOKIES.admin)?.value)) {
+      return NextResponse.next();
     }
+
+    const staff = await verifySessionToken("staff", req.cookies.get(SESSION_COOKIES.staff)?.value);
+    if (!staff) return redirectTo(req, PANEL_LOGIN_PATH);
 
     // /panel kok sayfasi ve /panel/kullanicilar gibi eslesmesiz yollar sadece tam admin icindir.
-    const requiredPerm = permissionForPath(pathname);
-    if (!requiredPerm || !session.permissions.includes(requiredPerm)) {
-      const firstAllowed = session.permissions[0];
-      const url = req.nextUrl.clone();
-      url.pathname = firstAllowed ? pathForPermission(firstAllowed) : "/panel/giris";
-      return NextResponse.redirect(url);
+    const required = permissionForPath(pathname);
+    if (!required || !staff.permissions.includes(required)) {
+      const firstAllowed = staff.permissions[0];
+      return redirectTo(req, firstAllowed ? pathForPermission(firstAllowed) : PANEL_LOGIN_PATH);
     }
-
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/musteri") && !pathname.startsWith("/musteri/giris")) {
-    const guestId = req.cookies.get("oa_guest")?.value;
-    if (guestId) return NextResponse.next();
-    const url = req.nextUrl.clone();
-    url.pathname = "/musteri/giris";
-    return NextResponse.redirect(url);
+  if (pathname.startsWith("/musteri") && pathname !== GUEST_LOGIN_PATH) {
+    const guest = await verifySessionToken("guest", req.cookies.get(SESSION_COOKIES.guest)?.value);
+    if (!guest) return redirectTo(req, GUEST_LOGIN_PATH);
   }
 
   return NextResponse.next();

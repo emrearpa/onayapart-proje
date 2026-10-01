@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { getAccounts, getAccountStatement } from "@/lib/queries";
-import { resolveRange } from "@/lib/dateRange";
-import { fmtMoney, fmtDate, toInputDate } from "@/lib/dates";
-import MuhasebeNav from "@/components/panel/MuhasebeNav";
+import { getAccounts, getAccountStatement } from "@/features/accounting/queries";
+import { resolveRange } from "@/features/accounting/date-range";
+import { fmtMoney, fmtDate, toInputDate } from "@/shared/lib/dates";
+import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
 
 export const dynamic = "force-dynamic";
 

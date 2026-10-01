@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { fmtDate } from "@/lib/dates";
-import { PERMISSIONS } from "@/lib/staffAuth";
-import SearchBox from "@/components/panel/SearchBox";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate } from "@/shared/lib/dates";
+import { PERMISSIONS } from "@/features/auth/permissions";
+import SearchBox from "@/shared/components/panel/SearchBox";
 
 export const dynamic = "force-dynamic";
 

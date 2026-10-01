@@ -1,4 +1,4 @@
-import { guestLogin } from "../actions";
+import { guestLogin } from "@/features/guests/portal-actions";
 
 export const metadata = { title: "Müşteri Girişi — Onay Apart", robots: { index: false } };
 

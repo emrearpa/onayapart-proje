@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { login, staffLogin } from "../actions";
-import LoginTabs from "@/components/panel/LoginTabs";
-import Icon from "@/components/panel/Icon";
+import { login, staffLogin } from "@/features/auth/actions";
+import LoginTabs from "@/features/auth/components/LoginTabs";
+import Icon from "@/shared/components/panel/Icon";
 
 export const metadata = { title: "Panel girişi", robots: { index: false } };
 

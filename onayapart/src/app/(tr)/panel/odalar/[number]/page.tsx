@@ -1,28 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { getAmenities } from "@/lib/queries";
-import { getRecordTranslations } from "@/lib/translations";
-import ConfirmButton from "@/components/ConfirmButton";
-import TranslationFields from "@/components/panel/TranslationFields";
-import {
-  updateRoom,
-  deleteRoom,
-  addPhoto,
-  deletePhoto,
-  createAsset,
-  updateAsset,
-  deleteAsset,
-  createExternalCalendar,
-  deleteExternalCalendar,
-  syncExternalCalendarNow,
-  assignRoomAmenity,
-  removeRoomAmenity,
-  createAndAssignAmenity,
-  sendRoomInfoWhatsapp,
-} from "../../actions";
-import { site } from "@/lib/site";
-import { fmtDate } from "@/lib/dates";
+import { prisma } from "@/shared/lib/db";
+import { getAmenities } from "@/features/rooms/queries";
+import { getRecordTranslations } from "@/features/content/translations";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import TranslationFields from "@/features/content/components/TranslationFields";
+import { updateRoom, deleteRoom, addPhoto, deletePhoto, createAsset, updateAsset, deleteAsset, assignRoomAmenity, removeRoomAmenity, createAndAssignAmenity, sendRoomInfoWhatsapp } from "@/features/rooms/actions";
+import { createExternalCalendar, deleteExternalCalendar, syncExternalCalendarNow } from "@/features/calendar-sync/actions";
+import { site } from "@/shared/lib/site";
+import { fmtDate } from "@/shared/lib/dates";
 
 export const dynamic = "force-dynamic";
 

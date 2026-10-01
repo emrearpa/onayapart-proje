@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/db";
-import { fmtDate } from "@/lib/dates";
-import ConfirmButton from "@/components/ConfirmButton";
-import StatCard from "@/components/panel/StatCard";
-import SearchBox from "@/components/panel/SearchBox";
-import { closeTask, reopenTask, createTask, addTaskNote } from "../actions";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate } from "@/shared/lib/dates";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import StatCard from "@/shared/components/panel/StatCard";
+import SearchBox from "@/shared/components/panel/SearchBox";
+import { closeTask, reopenTask, createTask, addTaskNote } from "@/features/maintenance/actions";
 
 export const dynamic = "force-dynamic";
 

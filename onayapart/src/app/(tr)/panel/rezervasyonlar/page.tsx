@@ -1,12 +1,12 @@
-import { prisma } from "@/lib/db";
-import { fmtDate, fmtMoney, toInputDate, addDays } from "@/lib/dates";
-import { stayTypes } from "@/lib/site";
-import { getAccounts } from "@/lib/queries";
-import { createReservation, setReservationStatus, addPayment, findGuestByPhone } from "../actions";
-import SearchBox from "@/components/panel/SearchBox";
-import PhoneInput from "@/components/panel/PhoneInput";
-import ExtraGuestFields from "@/components/panel/ExtraGuestFields";
-import PaymentRowForm from "@/components/panel/PaymentRowForm";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate, fmtMoney, toInputDate, addDays } from "@/shared/lib/dates";
+import { stayTypes } from "@/features/reservations/constants";
+import { getAccounts } from "@/features/accounting/queries";
+import { createReservation, setReservationStatus, addPayment, findGuestByPhone } from "@/features/reservations/actions";
+import SearchBox from "@/shared/components/panel/SearchBox";
+import PhoneInput from "@/shared/components/panel/PhoneInput";
+import ExtraGuestFields from "@/features/reservations/components/ExtraGuestFields";
+import PaymentRowForm from "@/features/reservations/components/PaymentRowForm";
 
 export const dynamic = "force-dynamic";
 

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import FloatingCta from "@/components/FloatingCta";
-import TypeCards from "@/components/TypeCards";
-import RoomCard from "@/components/RoomCard";
-import { getRoomTypes, getRooms } from "@/lib/queries";
-import { hreflangAlternates } from "@/lib/i18n/config";
+import Header from "@/shared/components/Header";
+import Footer from "@/shared/components/Footer";
+import FloatingCta from "@/shared/components/FloatingCta";
+import TypeCards from "@/features/rooms/components/TypeCards";
+import RoomCard from "@/features/rooms/components/RoomCard";
+import { getRoomTypes, getRooms } from "@/features/rooms/queries";
+import { hreflangAlternates } from "@/shared/i18n/config";
 
 export const revalidate = 300;
 

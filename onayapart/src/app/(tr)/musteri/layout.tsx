@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { guestLogout } from "./actions";
+import { guestLogout } from "@/features/guests/portal-actions";
 
 export const metadata = { title: "Onay Apart — Müşteri Paneli", robots: { index: false, follow: false } };
 

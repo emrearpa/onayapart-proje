@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import FloatingCta from "@/components/FloatingCta";
-import RoomCard from "@/components/RoomCard";
-import LeadForm from "@/components/LeadForm";
-import { getRoomType, getRooms } from "@/lib/queries";
-import { prisma } from "@/lib/db";
-import { fmtMoney } from "@/lib/dates";
-import { hreflangAlternates } from "@/lib/i18n/config";
+import Header from "@/shared/components/Header";
+import Footer from "@/shared/components/Footer";
+import FloatingCta from "@/shared/components/FloatingCta";
+import RoomCard from "@/features/rooms/components/RoomCard";
+import LeadForm from "@/features/leads/components/LeadForm";
+import { getRoomType, getRooms } from "@/features/rooms/queries";
+import { prisma } from "@/shared/lib/db";
+import { fmtMoney } from "@/shared/lib/dates";
+import { hreflangAlternates } from "@/shared/i18n/config";
 
 export const revalidate = 300;
 

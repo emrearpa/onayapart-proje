@@ -1,21 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { fmtDate, fmtMoney, toInputDate } from "@/lib/dates";
-import { getAccounts } from "@/lib/queries";
-import {
-  updateGuest,
-  createExtraGuest,
-  deleteExtraGuest,
-  addRoomServiceCharge,
-  deleteRoomServiceCharge,
-  approveRoomServiceCharge,
-  rejectRoomServiceCharge,
-  addPayment,
-} from "../../actions";
-import ConfirmButton from "@/components/ConfirmButton";
-import PhoneInput from "@/components/panel/PhoneInput";
-import PaymentRowForm from "@/components/panel/PaymentRowForm";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate, fmtMoney, toInputDate } from "@/shared/lib/dates";
+import { getAccounts } from "@/features/accounting/queries";
+import { updateGuest } from "@/features/guests/actions";
+import { createExtraGuest, deleteExtraGuest, addRoomServiceCharge, deleteRoomServiceCharge, approveRoomServiceCharge, rejectRoomServiceCharge, addPayment } from "@/features/reservations/actions";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import PhoneInput from "@/shared/components/panel/PhoneInput";
+import PaymentRowForm from "@/features/reservations/components/PaymentRowForm";
 
 export const dynamic = "force-dynamic";
 

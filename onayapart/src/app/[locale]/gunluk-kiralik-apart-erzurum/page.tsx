@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import LandingTemplate, { LandingContent } from "@/components/LandingTemplate";
-import { isLocale, type Locale } from "@/lib/i18n/config";
+import LandingTemplate, { LandingContent } from "@/features/content/components/LandingTemplate";
+import { isLocale, type Locale } from "@/shared/i18n/config";
 
 export const revalidate = 600;
 

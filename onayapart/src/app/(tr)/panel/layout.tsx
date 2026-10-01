@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { logout } from "./actions";
-import { verifyStaffSessionToken, permissionForPath } from "@/lib/staffAuth";
-import PanelNav, { NavItem } from "@/components/panel/PanelNav";
+import { logout } from "@/features/auth/actions";
+import { verifyStaffSessionToken } from "@/features/auth/session";
+import { permissionForPath } from "@/features/auth/permissions";
+import PanelNav, { NavItem } from "@/shared/components/panel/PanelNav";
 
 export const metadata = { title: "Onay ERP", robots: { index: false, follow: false } };
 

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "../globals.css";
-import { site, fullAddress } from "@/lib/site";
-import { getSiteSettings } from "@/lib/queries";
-import JsonLd from "@/components/JsonLd";
+import { site, fullAddress } from "@/shared/lib/site";
+import { getSiteSettings } from "@/features/content/queries";
+import JsonLd from "@/shared/components/JsonLd";
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
 

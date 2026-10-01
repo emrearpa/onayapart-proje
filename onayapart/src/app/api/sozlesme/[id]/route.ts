@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/db";
-import { getSiteSettings } from "@/lib/queries";
-import { generateContractPdf } from "@/lib/contract";
+import { prisma } from "@/shared/lib/db";
+import { getSiteSettings } from "@/features/content/queries";
+import { generateContractPdf } from "@/features/reservations/contract";
 
 /**
  * Sozlesme indirme. Iki turlu erisim kabul edilir:

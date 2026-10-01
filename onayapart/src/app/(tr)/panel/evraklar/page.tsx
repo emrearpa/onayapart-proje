@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
-import { fmtDate } from "@/lib/dates";
-import ConfirmButton from "@/components/ConfirmButton";
-import { uploadCompanyDocument, deleteCompanyDocument, sendCompanyDocumentWhatsapp, sendCompanyDocumentEmail } from "./actions";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate } from "@/shared/lib/dates";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import { uploadCompanyDocument, deleteCompanyDocument, sendCompanyDocumentWhatsapp, sendCompanyDocumentEmail } from "@/features/documents/actions";
 
 export const dynamic = "force-dynamic";
 

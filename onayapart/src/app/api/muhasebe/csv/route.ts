@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getLedgerInRange, getAccountTypeLedger, getCardTransactions, getAccountStatement } from "@/lib/queries";
-import { resolveRange } from "@/lib/dateRange";
-import { buildLedgerCsv, buildStatementCsv } from "@/lib/csv";
+import { getLedgerInRange, getAccountTypeLedger, getCardTransactions, getAccountStatement } from "@/features/accounting/queries";
+import { resolveRange } from "@/features/accounting/date-range";
+import { buildLedgerCsv, buildStatementCsv } from "@/features/accounting/csv";
 
 /**
  * Muhasebe CSV/Excel disa aktarimi - sadece tam admin girisiyle indirilebilir.

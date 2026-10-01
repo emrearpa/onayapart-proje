@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { fmtMoney, fmtDate } from "@/lib/dates";
-import StatCard from "@/components/panel/StatCard";
-import SearchBox from "@/components/panel/SearchBox";
+import { prisma } from "@/shared/lib/db";
+import { fmtMoney, fmtDate } from "@/shared/lib/dates";
+import StatCard from "@/shared/components/panel/StatCard";
+import SearchBox from "@/shared/components/panel/SearchBox";
 
 export const dynamic = "force-dynamic";
 

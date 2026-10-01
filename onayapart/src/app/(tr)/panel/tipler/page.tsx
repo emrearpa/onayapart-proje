@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/db";
-import ConfirmButton from "@/components/ConfirmButton";
-import TranslationFields from "@/components/panel/TranslationFields";
-import { getBatchRecordTranslations, type FieldTranslations } from "@/lib/translations";
-import type { Locale } from "@/lib/i18n/config";
-import { createRoomType, updateRoomType, deleteRoomType } from "../actions";
+import { prisma } from "@/shared/lib/db";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import TranslationFields from "@/features/content/components/TranslationFields";
+import { getBatchRecordTranslations, type FieldTranslations } from "@/features/content/translations";
+import type { Locale } from "@/shared/i18n/config";
+import { createRoomType, updateRoomType, deleteRoomType } from "@/features/rooms/actions";
 
 export const dynamic = "force-dynamic";
 

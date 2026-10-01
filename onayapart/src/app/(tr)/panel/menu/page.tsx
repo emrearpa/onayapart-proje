@@ -1,8 +1,8 @@
-import { prisma } from "@/lib/db";
-import { fmtMoney } from "@/lib/dates";
-import ConfirmButton from "@/components/ConfirmButton";
-import TranslationFields from "@/components/panel/TranslationFields";
-import { getBatchRecordTranslations } from "@/lib/translations";
+import { prisma } from "@/shared/lib/db";
+import { fmtMoney } from "@/shared/lib/dates";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import TranslationFields from "@/features/content/components/TranslationFields";
+import { getBatchRecordTranslations } from "@/features/content/translations";
 import {
   createMenuCategory,
   deleteMenuCategory,
@@ -10,7 +10,7 @@ import {
   updateMenuItem,
   deleteMenuItem,
   updateMenuVisibility,
-} from "./actions";
+} from "@/features/menu/actions";
 
 export const dynamic = "force-dynamic";
 

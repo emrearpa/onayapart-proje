@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { getIntegrationSettings, retrieveCheckoutForm } from "@/lib/iyzico";
-import { site } from "@/lib/site";
+import { prisma } from "@/shared/lib/db";
+import { getIntegrationSettings } from "@/features/integrations/settings";
+import { retrieveCheckoutForm } from "@/features/payments/iyzico";
+import { site } from "@/shared/lib/site";
 
 /**
  * iyzico odeme tamamlandiktan sonra misafirin taraycisini bu adrese (POST) geri

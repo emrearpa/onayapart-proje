@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import LandingTemplate, { LandingContent } from "@/components/LandingTemplate";
-import { hreflangAlternates } from "@/lib/i18n/config";
+import LandingTemplate, { LandingContent } from "@/features/content/components/LandingTemplate";
+import { hreflangAlternates } from "@/shared/i18n/config";
 
 export const revalidate = 600;
 

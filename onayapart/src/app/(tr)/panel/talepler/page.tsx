@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/db";
-import { fmtDate } from "@/lib/dates";
-import { handleLead } from "../actions";
-import SearchBox from "@/components/panel/SearchBox";
+import { prisma } from "@/shared/lib/db";
+import { fmtDate } from "@/shared/lib/dates";
+import { handleLead } from "@/features/leads/actions";
+import SearchBox from "@/shared/components/panel/SearchBox";
 
 export const dynamic = "force-dynamic";
 

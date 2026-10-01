@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/db";
-import { getInventoryItemsWithStock } from "@/lib/queries";
-import { fmtDate } from "@/lib/dates";
-import ConfirmButton from "@/components/ConfirmButton";
-import StatCard from "@/components/panel/StatCard";
-import SearchBox from "@/components/panel/SearchBox";
+import { prisma } from "@/shared/lib/db";
+import { getInventoryItemsWithStock } from "@/features/inventory/queries";
+import { fmtDate } from "@/shared/lib/dates";
+import ConfirmButton from "@/shared/components/ConfirmButton";
+import StatCard from "@/shared/components/panel/StatCard";
+import SearchBox from "@/shared/components/panel/SearchBox";
 import {
   createInventoryItem,
   updateInventoryItem,
@@ -12,7 +12,7 @@ import {
   recordStockIn,
   transferStock,
   recordStockOut,
-} from "./actions";
+} from "@/features/inventory/actions";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { syncAllExternalCalendars } from "@/lib/calendarSync";
+import { syncAllExternalCalendars } from "@/features/calendar-sync/sync";
 
 /**
  * Vercel Cron tarafindan otomatik cagrilir (vercel.json'daki schedule'a gore).

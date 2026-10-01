@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import FloatingCta from "@/components/FloatingCta";
-import LeadForm from "@/components/LeadForm";
-import { fullAddress, mapsLink } from "@/lib/site";
-import { getSiteSettings } from "@/lib/queries";
-import { isLocale, type Locale } from "@/lib/i18n/config";
-import { getDictionary } from "@/lib/i18n/dictionaries";
+import Header from "@/shared/components/Header";
+import Footer from "@/shared/components/Footer";
+import FloatingCta from "@/shared/components/FloatingCta";
+import LeadForm from "@/features/leads/components/LeadForm";
+import { fullAddress, mapsLink } from "@/shared/lib/site";
+import { getSiteSettings } from "@/features/content/queries";
+import { isLocale, type Locale } from "@/shared/i18n/config";
+import { getDictionary } from "@/shared/i18n/dictionaries";
 
 export async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
   if (!isLocale(params.locale)) return {};

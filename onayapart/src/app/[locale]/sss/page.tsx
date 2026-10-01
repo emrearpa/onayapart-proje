@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import FloatingCta from "@/components/FloatingCta";
-import { getFaqs } from "@/lib/queries";
-import { getBatchTranslations, withFallback } from "@/lib/translations";
-import { isLocale, type Locale } from "@/lib/i18n/config";
-import { getDictionary } from "@/lib/i18n/dictionaries";
+import Header from "@/shared/components/Header";
+import Footer from "@/shared/components/Footer";
+import FloatingCta from "@/shared/components/FloatingCta";
+import { getFaqs } from "@/features/content/queries";
+import { getBatchTranslations, withFallback } from "@/features/content/translations";
+import { isLocale, type Locale } from "@/shared/i18n/config";
+import { getDictionary } from "@/shared/i18n/dictionaries";
 
 export const revalidate = 300;
 
