@@ -7,3 +7,4 @@ out/
 *.db-journal
 .DS_Store
 private-uploads/
+push-to-github.bat
