@@ -1,29 +1,22 @@
 import { prisma } from "@/shared/lib/db";
 import { fmtDate, fmtMoney, toInputDate, addDays } from "@/shared/lib/dates";
-import { stayTypes } from "@/features/reservations/constants";
+import { RESERVATION_STATUSES, RESERVATION_STATUS_LABEL, STAY_TYPES } from "@/features/reservations/constants";
 import { getAccounts } from "@/features/accounting/queries";
 import { createReservation, setReservationStatus, addPayment, findGuestByPhone } from "@/features/reservations/actions";
 import SearchBox from "@/shared/components/panel/SearchBox";
 import PhoneInput from "@/shared/components/panel/PhoneInput";
 import ExtraGuestFields from "@/features/reservations/components/ExtraGuestFields";
 import PaymentRowForm from "@/features/reservations/components/PaymentRowForm";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
-
-const STATUSES = ["OPSIYON", "ONAYLI", "GIRIS_YAPTI", "TAMAMLANDI", "IPTAL"];
-const STATUS_LABEL: Record<string, string> = {
-  OPSIYON: "Opsiyon",
-  ONAYLI: "Onaylı",
-  GIRIS_YAPTI: "Giriş yaptı",
-  TAMAMLANDI: "Çıkış Yaptı",
-  IPTAL: "İptal",
-};
 
 export default async function ReservationsPage({
   searchParams,
 }: {
   searchParams: { hata?: string; ok?: string; q?: string; misafir?: string };
 }) {
+  await requirePanel("rezervasyonlar");
   const q = (searchParams.q ?? "").trim();
   const qAsNumber = Number(q);
   const isNumericQuery = q !== "" && Number.isFinite(qAsNumber);
@@ -138,7 +131,7 @@ export default async function ReservationsPage({
           <label className="text-xs font-bold">
             Konaklama tipi
             <select name="stayType" className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal">
-              {stayTypes.map((s) => (
+              {STAY_TYPES.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
                 </option>
@@ -151,6 +144,7 @@ export default async function ReservationsPage({
             <input
               type="date"
               name="checkIn"
+              required
               defaultValue={toInputDate(today)}
               className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal"
             />
@@ -161,6 +155,7 @@ export default async function ReservationsPage({
             <input
               type="date"
               name="checkOut"
+              required
               defaultValue={toInputDate(addDays(today, 3))}
               className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal"
             />
@@ -179,6 +174,7 @@ export default async function ReservationsPage({
             Ad Soyad
             <input
               name="fullName"
+              required
               defaultValue={prefillGuest?.fullName ?? ""}
               className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal"
             />
@@ -187,7 +183,7 @@ export default async function ReservationsPage({
           <label className="text-xs font-bold">
             Telefon
             <div className="mt-1">
-              <PhoneInput name="phone" defaultValue={prefillGuest?.phone ?? ""} />
+              <PhoneInput name="phone" defaultValue={prefillGuest?.phone ?? ""} required />
             </div>
           </label>
 
@@ -374,9 +370,9 @@ export default async function ReservationsPage({
                           defaultValue={r.status}
                           className="rounded-lg border border-line px-2 py-1.5 text-xs"
                         >
-                          {STATUSES.map((s) => (
+                          {RESERVATION_STATUSES.map((s) => (
                             <option key={s} value={s}>
-                              {STATUS_LABEL[s]}
+                              {RESERVATION_STATUS_LABEL[s]}
                             </option>
                           ))}
                         </select>

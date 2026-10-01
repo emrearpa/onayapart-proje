@@ -3,6 +3,7 @@ import { getCardTransactions } from "@/features/accounting/queries";
 import { resolveRange, RANGE_PRESETS } from "@/features/accounting/date-range";
 import { fmtMoney, fmtDate, toInputDate } from "@/shared/lib/dates";
 import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export default async function PosPage({
 }: {
   searchParams: { aralik?: string; bas?: string; bit?: string };
 }) {
+  await requirePanel("muhasebe");
   const now = new Date();
   const range = resolveRange(searchParams.aralik, searchParams.bas, searchParams.bit);
   const entries = await getCardTransactions(range.start, range.end);

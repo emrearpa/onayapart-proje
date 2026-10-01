@@ -1,9 +1,9 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { prisma } from "@/shared/lib/db";
 import { fmtDate, fmtMoney, toInputDate } from "@/shared/lib/dates";
-import { PERMISSIONS } from "@/features/auth/permissions";
+import { PERMISSIONS, parsePermissions } from "@/features/auth/permissions";
+import { MIN_PASSWORD_LENGTH } from "@/features/auth/password";
 import {
   updateEmployeeProfile,
   uploadEmployeeDocument,
@@ -13,6 +13,7 @@ import {
   resetStaffUserPassword,
   toggleStaffUserActive,
 } from "@/features/staff/actions";
+import { requireAdmin } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,11 @@ const MESSAGES: Record<string, string> = {
 const ERRORS: Record<string, string> = {
   eksik: "Ad soyad ve pozisyon zorunludur.",
   evrak: "Başlık ve dosya seçimi zorunludur.",
-  "kullanici-eksik": "Kullanıcı adı, en az 4 haneli şifre, ad soyad ve en az bir yetki seçimi zorunludur.",
+  "kullanici-eksik": "Kullanıcı adı, ad soyad ve en az bir yetki seçimi zorunludur.",
   "kullanici-cakisma": "Bu kullanıcı adı zaten kullanılıyor.",
-  "sifre-kisa": "Şifre en az 4 karakter olmalı.",
+  "sifre-kisa": `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`,
+  "evrak-buyuk": "Dosya çok büyük (en fazla 15 MB).",
+  "evrak-tur": "Bu dosya türü desteklenmiyor (PDF, JPG, PNG, WEBP, Word, Excel).",
 };
 
 export default async function EmployeeDetailPage({
@@ -39,14 +42,8 @@ export default async function EmployeeDetailPage({
   params: { id: string };
   searchParams: { ok?: string; hata?: string };
 }) {
-  // Ozluk evraklari ve kullanici yetki yonetimi hassas oldugundan bu sayfa - "personel"
-  // yetkisi verilmis olsa bile - sadece tam admin girisiyle acilir. Sinirli yetkili
-  // personel, listeden maas odemesi gibi gunluk islemleri yapabilir ama bu detaya giremez.
-  const cookieStore = cookies();
-  const isFullAdmin =
-    Boolean(cookieStore.get("oa_panel")?.value) && cookieStore.get("oa_panel")?.value === process.env.PANEL_PASSWORD;
-  if (!isFullAdmin) redirect("/panel/personel");
-
+  // Ozluk evraklari ve yetki yonetimi hassastir: "Personel" yetkisi olsa bile yalnizca tam admin girer.
+  await requireAdmin();
   const employee = await prisma.employee.findUnique({
     where: { id: params.id },
     include: {
@@ -58,7 +55,7 @@ export default async function EmployeeDetailPage({
 
   if (!employee) notFound();
 
-  const selectedPerms = employee.staffUser?.permissions ? employee.staffUser.permissions.split(",") : [];
+  const selectedPerms: string[] = parsePermissions(employee.staffUser?.permissions);
 
   // Bu personelin panel uzerinden yaptigi islemler - StaffUser hesabi varsa gosterilir.
   const activityLogs = employee.staffUser
@@ -241,7 +238,7 @@ export default async function EmployeeDetailPage({
             </label>
             <label className="text-xs font-bold">
               Şifre
-              <input name="password" type="password" className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal" />
+              <input name="password" type="password" required minLength={MIN_PASSWORD_LENGTH} autoComplete="new-password" className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal" />
             </label>
 
             <fieldset className="sm:col-span-2">
@@ -313,7 +310,7 @@ export default async function EmployeeDetailPage({
               <input type="hidden" name="employeeId" value={employee.id} />
               <label className="text-xs font-bold">
                 Yeni şifre belirle
-                <input name="password" type="password" className="mt-1 w-56 rounded-xl border border-line px-3 py-2.5 text-sm font-normal" />
+                <input name="password" type="password" required minLength={MIN_PASSWORD_LENGTH} autoComplete="new-password" className="mt-1 w-56 rounded-xl border border-line px-3 py-2.5 text-sm font-normal" />
               </label>
               <button className="btn-outline">Şifreyi güncelle</button>
             </form>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Labels = {
+export type LeadFormLabels = {
   title: string;
   subtitle: string;
   name: string;
@@ -15,43 +15,29 @@ type Labels = {
   doneText: string;
 };
 
-const trLabels: Labels = {
-  title: "Sizi arayalım",
-  subtitle: "Müsaitlik ve fiyat bilgisi için numaranızı bırakın.",
-  name: "Adınız soyadınız",
-  phone: "Telefon numaranız",
-  message: "Tarih ve kişi sayısı (isteğe bağlı)",
-  submit: "Talebi gönder",
-  sending: "Gönderiliyor",
-  errorMsg: "Ad ve telefon alanlarını doldurun, sonra tekrar gönderin.",
-  doneTitle: "Talebiniz bize ulaştı.",
-  doneText: "En kısa sürede sizi arayacağız. Acele ediyorsanız {phone} numarasından hemen ulaşabilirsiniz.",
-};
+const INPUT = "w-full rounded-xl border border-line px-4 py-3 text-sm";
 
 export default function LeadForm({
+  phoneDisplay,
   roomNumber,
-  phoneDisplay = "0530 652 70 88",
   labels,
 }: {
+  /** Isletmenin guncel telefonu (panelden yonetilir); tesekkur mesajinda gosterilir. */
+  phoneDisplay: string;
   roomNumber?: number;
-  phoneDisplay?: string;
-  labels?: Labels;
+  labels: LeadFormLabels;
 }) {
-  const L = labels ?? trLabels;
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
-  const [values, setValues] = useState({ name: "", phone: "", message: "" });
 
-  async function submit() {
-    if (!values.name.trim() || !values.phone.trim()) {
-      setState("error");
-      return;
-    }
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = Object.fromEntries(new FormData(event.currentTarget));
     setState("sending");
     try {
       const res = await fetch("/api/talep", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, roomNumber }),
+        body: JSON.stringify({ ...form, roomNumber }),
       });
       setState(res.ok ? "done" : "error");
     } catch {
@@ -61,46 +47,35 @@ export default function LeadForm({
 
   if (state === "done") {
     return (
-      <div className="rounded-2xl border border-brand-200 bg-brand-50 p-5 text-sm">
-        <p className="font-bold text-brand-700">{L.doneTitle}</p>
-        <p className="mt-1 text-ink-soft">{L.doneText.replace("{phone}", phoneDisplay)}</p>
+      <div role="status" className="rounded-2xl border border-brand-200 bg-brand-50 p-5 text-sm">
+        <p className="font-bold text-brand-700">{labels.doneTitle}</p>
+        <p className="mt-1 text-ink-soft">{labels.doneText.replace("{phone}", phoneDisplay)}</p>
       </div>
     );
   }
 
   return (
-    <div className="card p-5">
-      <h2 className="text-lg font-extrabold tracking-tight">{L.title}</h2>
-      <p className="mt-1 text-sm text-ink-soft">{L.subtitle}</p>
+    <form onSubmit={submit} className="card p-5">
+      <h2 className="text-lg font-extrabold tracking-tight">{labels.title}</h2>
+      <p className="mt-1 text-sm text-ink-soft">{labels.subtitle}</p>
 
       <div className="mt-4 space-y-3">
-        <input
-          className="w-full rounded-xl border border-line px-4 py-3 text-sm"
-          placeholder={L.name}
-          value={values.name}
-          onChange={(e) => setValues({ ...values, name: e.target.value })}
-        />
-        <input
-          className="w-full rounded-xl border border-line px-4 py-3 text-sm"
-          placeholder={L.phone}
-          inputMode="tel"
-          value={values.phone}
-          onChange={(e) => setValues({ ...values, phone: e.target.value })}
-        />
-        <textarea
-          className="w-full rounded-xl border border-line px-4 py-3 text-sm"
-          rows={3}
-          placeholder={L.message}
-          value={values.message}
-          onChange={(e) => setValues({ ...values, message: e.target.value })}
-        />
+        <input name="name" required minLength={2} maxLength={120} autoComplete="name" aria-label={labels.name} placeholder={labels.name} className={INPUT} />
+        <input name="phone" required type="tel" inputMode="tel" maxLength={30} autoComplete="tel" aria-label={labels.phone} placeholder={labels.phone} className={INPUT} />
+        <textarea name="message" rows={3} maxLength={1000} aria-label={labels.message} placeholder={labels.message} className={INPUT} />
+        {/* Botlar icin tuzak alan: insanlar gormez, doldurulursa talep yok sayilir. */}
+        <input name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
       </div>
 
-      {state === "error" && <p className="mt-3 text-sm font-semibold text-red-700">{L.errorMsg}</p>}
+      {state === "error" && (
+        <p role="alert" className="mt-3 text-sm font-semibold text-red-700">
+          {labels.errorMsg}
+        </p>
+      )}
 
-      <button onClick={submit} disabled={state === "sending"} className="btn-primary mt-4 w-full disabled:opacity-60">
-        {state === "sending" ? L.sending : L.submit}
+      <button disabled={state === "sending"} className="btn-primary mt-4 w-full disabled:opacity-60">
+        {state === "sending" ? labels.sending : labels.submit}
       </button>
-    </div>
+    </form>
   );
 }

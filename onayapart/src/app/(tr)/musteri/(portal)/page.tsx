@@ -1,28 +1,15 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/shared/lib/db";
 import { fmtDate, fmtMoney } from "@/shared/lib/dates";
 import { createGuestRequest, startOnlinePayment, createGuestRoomServiceOrder } from "@/features/guests/portal-actions";
+import { requireGuest, GUEST_LOGIN_PATH } from "@/features/auth/guards";
+import { getSiteSettings } from "@/features/content/queries";
 import { getIntegrationSettings } from "@/features/integrations/settings";
+import { isIyzicoReady } from "@/features/payments/iyzico";
+import { RESERVATION_STATUS_LABEL, STAY_TYPE_LABEL } from "@/features/reservations/constants";
 import { getMenu } from "@/features/menu/queries";
 
 export const dynamic = "force-dynamic";
-
-const STAY_LABEL: Record<string, string> = {
-  GUNLUK: "Günlük",
-  HAFTALIK: "Haftalık",
-  AYLIK: "Aylık",
-  DONEMLIK: "Öğrenci dönemlik",
-  YILLIK: "Yıllık",
-  KURUMSAL: "Kurumsal",
-};
-const RES_STATUS_LABEL: Record<string, string> = {
-  OPSIYON: "Opsiyon",
-  ONAYLI: "Onaylı",
-  GIRIS_YAPTI: "Giriş yaptı",
-  TAMAMLANDI: "Çıkış Yaptı",
-  IPTAL: "İptal",
-};
 
 const ERRORS: Record<string, string> = {
   eksik: "Konu ve daire seçimi zorunludur.",
@@ -44,10 +31,9 @@ export default async function GuestDashboard({
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
-  const guestId = cookies().get("oa_guest")?.value;
-  if (!guestId) redirect("/musteri/giris");
+  const guestId = await requireGuest();
 
-  const [guest, menuSettings, menu] = await Promise.all([
+  const [guest, menuSettings, menu, integration] = await Promise.all([
     prisma.guest.findUnique({
       where: { id: guestId },
       include: {
@@ -59,17 +45,18 @@ export default async function GuestDashboard({
             roomServiceCharges: { orderBy: { createdAt: "desc" } },
           },
         },
-        tasks: { orderBy: { createdAt: "desc" }, include: { room: true } },
+        // Cikis sonrasi otomatik acilan temizlik gorevleri personele aittir; misafire gosterilmez.
+        tasks: { where: { kind: { not: "TEMIZLIK" } }, orderBy: { createdAt: "desc" }, include: { room: true } },
       },
     }),
-    prisma.siteSetting.findUnique({ where: { id: "main" } }),
+    getSiteSettings(),
     getMenu(),
+    getIntegrationSettings(),
   ]);
 
-  if (!guest) redirect("/musteri/giris");
+  if (!guest) redirect(GUEST_LOGIN_PATH);
 
-  const integration = await getIntegrationSettings();
-  const paymentsEnabled = integration.iyzicoEnabled && Boolean(integration.iyzicoApiKey) && Boolean(integration.iyzicoSecretKey);
+  const paymentsEnabled = isIyzicoReady(integration);
 
   const totalDebt = guest.reservations
     .filter((r) => r.status !== "IPTAL")
@@ -86,7 +73,7 @@ export default async function GuestDashboard({
   const activeReservation = guest.reservations.find(
     (r) => r.status !== "IPTAL" && r.status !== "TAMAMLANDI" && r.checkIn <= now && r.checkOut > now
   );
-  const menuOpen = Boolean(menuSettings?.menuEnabled) && menu.categories.length > 0;
+  const menuOpen = menuSettings.menuEnabled && menu.categories.length > 0;
 
   return (
     <div>
@@ -169,10 +156,10 @@ export default async function GuestDashboard({
                   <tr key={r.id} className="border-t border-line">
                     <td className="py-3 font-semibold">{r.room.number} · {r.room.type.code}</td>
                     <td className="py-3 text-xs">{fmtDate(r.checkIn)} → {fmtDate(r.checkOut)}</td>
-                    <td className="py-3">{STAY_LABEL[r.stayType] ?? r.stayType}</td>
+                    <td className="py-3">{STAY_TYPE_LABEL[r.stayType] ?? r.stayType}</td>
                     <td className="py-3">{fmtMoney(r.totalAmount)}</td>
                     <td className="py-3 font-bold">{balance ? fmtMoney(balance) : "—"}</td>
-                    <td className="py-3">{RES_STATUS_LABEL[r.status] ?? r.status}</td>
+                    <td className="py-3">{RESERVATION_STATUS_LABEL[r.status] ?? r.status}</td>
                     <td className="py-3">
                       <a href={`/api/sozlesme/${r.id}`} className="text-xs font-bold text-brand-600 hover:underline">
                         İndir
@@ -297,7 +284,7 @@ export default async function GuestDashboard({
             </label>
             <label className="text-xs font-bold">
               Konu
-              <input name="title" placeholder="Örn. Televizyon açılmıyor" className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal" />
+              <input name="title" required maxLength={120} placeholder="Örn. Televizyon açılmıyor" className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal" />
             </label>
             <label className="text-xs font-bold sm:col-span-2">
               Detay (isteğe bağlı)

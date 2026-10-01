@@ -5,6 +5,7 @@ import { setRoomCondition, setRoomPublished, setRate, createRoom, sendRoomInfoWh
 import { syncAllCalendars } from "@/features/calendar-sync/actions";
 import SearchBox from "@/shared/components/panel/SearchBox";
 import ConfirmButton from "@/shared/components/ConfirmButton";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default async function RoomsAdminPage({
 }: {
   searchParams: { ok?: string; hata?: string; basarili?: string; toplam?: string; q?: string };
 }) {
+  await requirePanel("odalar");
   const q = (searchParams.q ?? "").trim().toLowerCase();
   const [rooms, types, amenities] = await Promise.all([
     prisma.room.findMany({ orderBy: { number: "asc" }, include: { type: true, photos: true, externalCalendars: true } }),

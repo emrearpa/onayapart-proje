@@ -4,104 +4,62 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { prisma } from "@/shared/lib/db";
+import { checked, positiveNum, str } from "@/shared/lib/form";
+import { requirePanel } from "@/features/auth/guards";
 import { logActivity } from "@/features/audit/activity-log";
 import { computeMonthlyStats, sendTgaReport } from "@/features/accounting/tga";
+import { getIntegrationSettings, updateIntegrationSettings } from "@/features/integrations/settings";
+
+const PAGE_PATH = "/panel/muhasebe/tga";
 
 export async function updateTgaSettings(formData: FormData) {
-  const tgaEnabled = formData.get("tgaEnabled") === "on";
-  const tgaSandbox = formData.get("tgaSandbox") === "on";
-  const tgaApiKey = String(formData.get("tgaApiKey") ?? "").trim();
-  const tgaIlKodu = String(formData.get("tgaIlKodu") ?? "25").trim();
-  const tgaIlceKodu = String(formData.get("tgaIlceKodu") ?? "2045").trim();
-  const tgaOdaSayisi = Number(formData.get("tgaOdaSayisi") ?? 0);
-  const tgaYatakSayisi = Number(formData.get("tgaYatakSayisi") ?? 0);
+  await requirePanel("muhasebe");
+  const tgaEnabled = checked(formData, "tgaEnabled");
+  const existing = await getIntegrationSettings();
 
-  const existing = await prisma.integrationSetting.findUnique({ where: { id: "main" } });
-  // Tesis kimligi bir kere uretilir, hep ayni kalmali (TGA'ya "ayni tesis" olarak taninmasi icin).
-  const tgaFacilityId = existing?.tgaFacilityId || randomUUID();
-
-  await prisma.integrationSetting.upsert({
-    where: { id: "main" },
-    update: {
+  await updateIntegrationSettings(
+    {
       tgaEnabled,
-      tgaSandbox,
-      tgaIlKodu,
-      tgaIlceKodu,
-      tgaOdaSayisi: Number.isFinite(tgaOdaSayisi) ? tgaOdaSayisi : 0,
-      tgaYatakSayisi: Number.isFinite(tgaYatakSayisi) ? tgaYatakSayisi : 0,
-      tgaFacilityId,
-      tgaApiKey: tgaApiKey || existing?.tgaApiKey || "",
+      tgaSandbox: checked(formData, "tgaSandbox"),
+      tgaIlKodu: str(formData, "tgaIlKodu"),
+      tgaIlceKodu: str(formData, "tgaIlceKodu"),
+      tgaOdaSayisi: Math.trunc(positiveNum(formData, "tgaOdaSayisi")),
+      tgaYatakSayisi: Math.trunc(positiveNum(formData, "tgaYatakSayisi")),
+      // Tesis kimligi bir kere uretilir ve hep ayni kalir (TGA'da "ayni tesis" olarak taninmasi icin).
+      tgaFacilityId: existing.tgaFacilityId || randomUUID(),
     },
-    create: {
-      id: "main",
-      tgaEnabled,
-      tgaSandbox,
-      tgaIlKodu,
-      tgaIlceKodu,
-      tgaOdaSayisi,
-      tgaYatakSayisi,
-      tgaFacilityId,
-      tgaApiKey,
-    },
-  });
+    { tgaApiKey: str(formData, "tgaApiKey") }
+  );
 
   await logActivity("TGA ayarlarını güncelledi", tgaEnabled ? "Etkinleştirildi" : "Devre dışı bırakıldı");
-  revalidatePath("/panel/muhasebe/tga");
-  redirect("/panel/muhasebe/tga?ok=ayar");
+  revalidatePath(PAGE_PATH);
+  redirect(`${PAGE_PATH}?ok=ayar`);
 }
 
 export async function sendTgaReportAction(formData: FormData) {
-  const reportMonth = String(formData.get("reportMonth") ?? "").trim();
-  const priceRaw = String(formData.get("aylikOrtalamaFiyat") ?? "").trim();
-  const aylikOrtalamaFiyat = priceRaw ? Number(priceRaw) : null;
+  await requirePanel("muhasebe");
+  const reportMonth = str(formData, "reportMonth");
+  const averagePrice = positiveNum(formData, "aylikOrtalamaFiyat") || null;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(reportMonth)) redirect(`${PAGE_PATH}?hata=ay-gecersiz`);
 
-  if (!/^\d{4}-\d{2}$/.test(reportMonth)) redirect("/panel/muhasebe/tga?hata=ay-gecersiz");
-
-  const settings = await prisma.integrationSetting.findUnique({ where: { id: "main" } });
-  if (!settings?.tgaEnabled || !settings.tgaApiKey || !settings.tgaFacilityId) {
-    redirect("/panel/muhasebe/tga?hata=ayar-eksik");
-  }
+  const settings = await getIntegrationSettings();
+  if (!settings.tgaEnabled || !settings.tgaApiKey || !settings.tgaFacilityId) redirect(`${PAGE_PATH}?hata=ayar-eksik`);
 
   const [year, month] = reportMonth.split("-").map(Number);
-  const stats = await computeMonthlyStats(year, month);
+  const result = await sendTgaReport(settings, reportMonth, await computeMonthlyStats(year, month), averagePrice);
 
-  const result = await sendTgaReport(
-    {
-      tgaApiKey: settings!.tgaApiKey,
-      tgaSandbox: settings!.tgaSandbox,
-      tgaFacilityId: settings!.tgaFacilityId,
-      tgaIlKodu: settings!.tgaIlKodu,
-      tgaIlceKodu: settings!.tgaIlceKodu,
-      tgaOdaSayisi: settings!.tgaOdaSayisi,
-      tgaYatakSayisi: settings!.tgaYatakSayisi,
-    },
-    reportMonth,
-    stats,
-    aylikOrtalamaFiyat
-  );
-
-  await prisma.tgaSubmission.upsert({
-    where: { reportMonth },
-    update: {
-      status: result.ok ? "GONDERILDI" : "HATA",
-      requestId: result.requestId ?? null,
-      errorMessage: result.error ?? null,
-      sentAt: new Date(),
-    },
-    create: {
-      reportMonth,
-      status: result.ok ? "GONDERILDI" : "HATA",
-      requestId: result.requestId ?? null,
-      errorMessage: result.error ?? null,
-      sentAt: new Date(),
-    },
-  });
+  const outcome = {
+    status: result.ok ? "GONDERILDI" : "HATA",
+    requestId: result.requestId ?? null,
+    errorMessage: result.error ?? null,
+    sentAt: new Date(),
+  };
+  await prisma.tgaSubmission.upsert({ where: { reportMonth }, update: outcome, create: { reportMonth, ...outcome } });
 
   await logActivity(
     result.ok ? "TGA aylık raporu gönderdi" : "TGA aylık rapor gönderimi başarısız oldu",
     `${reportMonth}${result.error ? ` · ${result.error}` : ""}`
   );
-
-  revalidatePath("/panel/muhasebe/tga");
-  redirect(`/panel/muhasebe/tga?ok=${result.ok ? "gonderildi" : "hata"}&ay=${reportMonth}`);
+  revalidatePath(PAGE_PATH);
+  redirect(`${PAGE_PATH}?ok=${result.ok ? "gonderildi" : "hata"}&ay=${reportMonth}`);
 }

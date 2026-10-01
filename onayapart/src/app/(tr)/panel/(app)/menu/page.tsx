@@ -11,6 +11,7 @@ import {
   deleteMenuItem,
   updateMenuVisibility,
 } from "@/features/menu/actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function MenuAdminPage({
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("menu");
   const [categories, settings] = await Promise.all([
     prisma.menuCategory.findMany({ orderBy: { sort: "asc" }, include: { items: { orderBy: { sort: "asc" } } } }),
     prisma.siteSetting.findUnique({ where: { id: "main" } }),

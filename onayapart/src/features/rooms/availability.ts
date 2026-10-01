@@ -3,14 +3,6 @@ import { ACTIVE_RESERVATION_STATUSES } from "@/features/reservations/constants";
 
 export type Availability = "MUSAIT" | "DOLU" | "HARICI" | "TEMIZLIK" | "BAKIM";
 
-export const availabilityLabel: Record<Availability, string> = {
-  MUSAIT: "Müsait",
-  DOLU: "Dolu",
-  HARICI: "Dolu (Booking/Airbnb)",
-  TEMIZLIK: "Hazırlanıyor",
-  BAKIM: "Bakımda",
-};
-
 type Stay = { checkIn: Date; checkOut: Date };
 
 function coversDay(stay: Stay, day: Date): boolean {

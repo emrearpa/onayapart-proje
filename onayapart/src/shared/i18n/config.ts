@@ -2,8 +2,7 @@
  * Cok dilli site yapilandirmasi. Turkce (varsayilan) URL'lerde on ek almaz (/odalar),
  * mevcut SEO'ya dokunulmaz. Diger diller /en, /ar, /fa, /ru, /de, /fr, /es, /az, /ka
  * altinda yasar. Sistemin DESTEKLEDIGI tum diller bu liste - hangi firmanin
- * sitesinde HANGILERI ACIK oldugu ayri (bkz. SiteSetting.enabledLocales, "hreflangAlternates"
- * ve "isLocaleEnabled" fonksiyonlari).
+ * sitesinde HANGILERI ACIK oldugu ayridir (bkz. SiteSetting.enabledLocales ve parseEnabledLocales).
  */
 export const locales = ["en", "ar", "fa", "ru", "de", "fr", "es", "az", "ka"] as const;
 export type Locale = (typeof locales)[number];
@@ -29,25 +28,16 @@ export function isLocale(v: string): v is Locale {
   return (locales as readonly string[]).includes(v);
 }
 
+/** Panelde hicbir dil secilmediginde saklanan deger: site yalnizca Turkce yayinlanir. */
+export const NO_LOCALES = "none";
+
 /** SiteSetting.enabledLocales alanindaki virgullu metni gecerli Locale dizisine cevirir. */
 export function parseEnabledLocales(raw: string | null | undefined): Locale[] {
+  if (raw === NO_LOCALES) return [];
   if (!raw) return defaultEnabledLocales;
   const parsed = raw
     .split(",")
     .map((s) => s.trim())
     .filter(isLocale);
   return parsed.length > 0 ? parsed : defaultEnabledLocales;
-}
-
-/**
- * Bir Turkce sayfanin metadata.alternates.languages degeri. Next.js'te bir sayfa
- * kendi `alternates`'ini tanimlarsa, ust layout'takini TAMAMEN ezer - bu yuzden
- * her Turkce sayfa kendi alternates'inde bunu da eklemeli (path olmadan "/" ise
- * bos birak, varsayilan olarak ayni path kullanilir). Sadece ACIK olan diller
- * eklenir - kapali bir dili arama motorlarina bildirmeyiz.
- */
-export function hreflangAlternates(path: string, enabledLocales: Locale[] = defaultEnabledLocales): Record<string, string> {
-  const languages: Record<string, string> = { "x-default": path, tr: path };
-  for (const l of enabledLocales) languages[l] = `/${l}${path}`;
-  return languages;
 }

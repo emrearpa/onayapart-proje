@@ -22,7 +22,7 @@ function prune(now: number) {
 }
 
 /** Deneme hakki kaldiysa true doner ve denemeyi sayar. */
-export function consumeLoginAttempt(scope: string): boolean {
+export function consumeAttempt(scope: string): boolean {
   const now = Date.now();
   const key = `${scope}:${clientIp()}`;
   const entry = attempts.get(key);
@@ -36,6 +36,6 @@ export function consumeLoginAttempt(scope: string): boolean {
   return entry.count <= MAX_ATTEMPTS;
 }
 
-export function clearLoginAttempts(scope: string) {
+export function clearAttempts(scope: string) {
   attempts.delete(`${scope}:${clientIp()}`);
 }

@@ -1,4 +1,5 @@
-import type { Locale } from "@/shared/i18n/config";
+import { defaultLocale, type AnyLocale, type Locale } from "@/shared/i18n/config";
+import tr from "./tr";
 import en from "./en";
 import ar from "./ar";
 import fa from "./fa";
@@ -9,13 +10,13 @@ import es from "./es";
 import az from "./az";
 import ka from "./ka";
 
-// en'in yapisini (anahtarlari) referans alip degerleri string'e genisletiyoruz -
-// her dilin kendi metinleri farkli literal string oldugu icin `typeof en` ile
-// birebir eslesmezler, sadece SEKILLERI ayni olmali.
-type Dictionary = { [K in keyof typeof en]: { [F in keyof (typeof en)[K]]: string } };
+// Turkce sozlugun anahtarlari referans alinir; her dil ayni SEKLI tasimak zorundadir
+// (eksik ya da fazla anahtar derleme hatasi verir), degerler serbest metindir.
+export type Dictionary = { [K in keyof typeof tr]: { [F in keyof (typeof tr)[K]]: string } };
 
-const dictionaries: Record<Locale, Dictionary> = { en, ar, fa, ru, de, fr, es, az, ka };
+const dictionaries: Record<AnyLocale, Dictionary> = { tr, en, ar, fa, ru, de, fr, es, az, ka };
 
-export function getDictionary(locale: Locale): Dictionary {
-  return dictionaries[locale];
+/** Dil verilmezse varsayilan dilin (Turkce) sozlugu doner. */
+export function getDictionary(locale: Locale | undefined = undefined): Dictionary {
+  return dictionaries[locale ?? defaultLocale];
 }

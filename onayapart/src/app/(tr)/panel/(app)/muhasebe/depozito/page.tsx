@@ -3,10 +3,12 @@ import { fmtDate, fmtMoney } from "@/shared/lib/dates";
 import StatCard from "@/shared/components/panel/StatCard";
 import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
 import SearchBox from "@/shared/components/panel/SearchBox";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function DepositsPage({ searchParams }: { searchParams: { q?: string } }) {
+  await requirePanel("muhasebe");
   const q = (searchParams.q ?? "").trim();
 
   const reservationsAll = await prisma.reservation.findMany({

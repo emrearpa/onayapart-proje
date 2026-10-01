@@ -9,6 +9,7 @@ import { updateRoom, deleteRoom, addPhoto, deletePhoto, createAsset, updateAsset
 import { createExternalCalendar, deleteExternalCalendar, syncExternalCalendarNow } from "@/features/calendar-sync/actions";
 import { site } from "@/shared/lib/site";
 import { fmtDate } from "@/shared/lib/dates";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +21,13 @@ const CONDITIONS = [
 
 const ERRORS: Record<string, string> = {
   cakisma: "Bu daire numarası başka bir dairede kullanılıyor.",
-  "takvim-eksik": "Takvim adresi (.ics linki) zorunludur.",
+  "takvim-eksik": "Geçerli bir takvim adresi girin (https:// ile başlayan .ics linki).",
   "takvim-senkron": "Senkronizasyon başarısız oldu. Adresin doğru olduğundan emin olun ve tekrar deneyin.",
   gecmis: "Bu dairede geçmiş veya aktif rezervasyon kaydı var, bu yüzden silinemiyor. Yayından kaldırmayı deneyin.",
-  foto: "Dosya veya görsel adresi eksik.",
+  foto: "Bir dosya seçin ya da https:// ile başlayan bir görsel adresi girin.",
+  "foto-buyuk": "Fotoğraf çok büyük (en fazla 8 MB).",
+  "foto-tur": "Bu dosya türü desteklenmiyor (JPG, PNG, WEBP veya AVIF yükleyin).",
+  eksik: "Daire numarası ve tipi zorunludur.",
   "demirbas-eksik": "Demirbaş adı zorunludur.",
   "olanak-eksik": "Özellik adı zorunludur.",
   "olanak-cakisma": "Bu isimde bir özellik zaten var.",
@@ -39,6 +43,7 @@ export default async function RoomDetailPage({
   params: { number: string };
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("odalar");
   const number = Number(params.number);
   if (!Number.isFinite(number)) notFound();
 

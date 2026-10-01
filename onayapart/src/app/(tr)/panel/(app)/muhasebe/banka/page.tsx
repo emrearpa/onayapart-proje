@@ -3,16 +3,18 @@ import { getAccounts, getAccountTypeLedger } from "@/features/accounting/queries
 import { resolveRange, RANGE_PRESETS } from "@/features/accounting/date-range";
 import { fmtMoney, fmtDate, toInputDate } from "@/shared/lib/dates";
 import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
+import { requirePanel } from "@/features/auth/guards";
+import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from "@/features/reservations/constants";
 
 export const dynamic = "force-dynamic";
 
-const METHOD_LABEL: Record<string, string> = { NAKIT: "Nakit", KART: "Kart", HAVALE: "Havale" };
 
 export default async function BankaPage({
   searchParams,
 }: {
   searchParams: { aralik?: string; bas?: string; bit?: string };
 }) {
+  await requirePanel("muhasebe");
   const now = new Date();
   const range = resolveRange(searchParams.aralik, searchParams.bas, searchParams.bit);
 

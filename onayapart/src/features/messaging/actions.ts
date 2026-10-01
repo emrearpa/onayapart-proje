@@ -2,163 +2,134 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/shared/lib/db";
-import { sendWhatsappMessage, renderTemplate } from "@/features/messaging/whatsapp";
+import { isUniqueViolation, prisma } from "@/shared/lib/db";
+import { fmtDate, fmtMoney } from "@/shared/lib/dates";
+import { checked, optStr, str, strList } from "@/shared/lib/form";
 import { normalizePhone } from "@/shared/lib/phone";
+import { fillPlaceholders, slugify, textToHtml } from "@/shared/lib/text";
+import { requirePanel } from "@/features/auth/guards";
+import { getIntegrationSettings, updateIntegrationSettings } from "@/features/integrations/settings";
 import { sendEmail } from "@/features/messaging/email";
 import { sendSms } from "@/features/messaging/sms";
-import { fmtDate, fmtMoney, startOfDay } from "@/shared/lib/dates";
-import { getUpcomingPayments } from "@/features/reservations/queries";
+import { sendWhatsappMessage, type SendResult } from "@/features/messaging/whatsapp";
+import { currentPeriodKey, getRemindedReservationIds, getUpcomingPayments } from "@/features/reservations/queries";
+
+const PAGE_PATH = "/panel/bilgilendirme";
+const PAYMENT_REMINDER_TEMPLATE = "odeme-hatirlatma";
+
+function fail(reason: string): never {
+  redirect(`${PAGE_PATH}?hata=${reason}`);
+}
+
+function done(query: string): never {
+  revalidatePath("/panel", "layout");
+  redirect(`${PAGE_PATH}?${query}`);
+}
+
+/** Gonderim sonuclarini sayar ve ozet sorgu dizesine cevirir. */
+function createTally() {
+  const counts = { GONDERILDI: 0, LINK_HAZIRLANDI: 0, HATA: 0 };
+  return {
+    add: (status: SendResult["status"]) => void counts[status]++,
+    query: (ok: string) => `ok=${ok}&gonderildi=${counts.GONDERILDI}&hazir=${counts.LINK_HAZIRLANDI}&hata=${counts.HATA}`,
+  };
+}
 
 /* ------------------------- Sablon yonetimi ------------------------- */
 
 export async function updateTemplate(formData: FormData) {
-  const id = String(formData.get("id"));
-  const name = String(formData.get("name") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
-  if (!name || !body) redirect("/panel/bilgilendirme?hata=sablon-eksik");
+  await requirePanel("bilgilendirme");
+  const name = str(formData, "name");
+  const body = str(formData, "body");
+  if (!name || !body) fail("sablon-eksik");
 
-  await prisma.messageTemplate.update({ where: { id }, data: { name, body } });
-  redirect("/panel/bilgilendirme?ok=sablon");
+  await prisma.messageTemplate.update({ where: { id: str(formData, "id") }, data: { name, body } });
+  done("ok=sablon");
 }
 
 export async function createTemplate(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
-  if (!name || !body) redirect("/panel/bilgilendirme?hata=sablon-eksik");
+  await requirePanel("bilgilendirme");
+  const name = str(formData, "name");
+  const body = str(formData, "body");
+  if (!name || !body) fail("sablon-eksik");
 
-  const key =
-    name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || `sablon-${Date.now()}`;
-
-  const count = await prisma.messageTemplate.count();
   try {
-    await prisma.messageTemplate.create({ data: { key, name, body, sort: count + 1 } });
-  } catch {
-    redirect("/panel/bilgilendirme?hata=sablon-cakisma");
+    const count = await prisma.messageTemplate.count();
+    await prisma.messageTemplate.create({ data: { key: slugify(name, `sablon-${Date.now()}`), name, body, sort: count + 1 } });
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    fail("sablon-cakisma");
   }
-  redirect("/panel/bilgilendirme?ok=sablon-eklendi");
+  done("ok=sablon-eklendi");
 }
 
 export async function deleteTemplate(formData: FormData) {
-  const id = String(formData.get("id"));
-  await prisma.messageTemplate.delete({ where: { id } });
-  redirect("/panel/bilgilendirme?ok=sablon-silindi");
+  await requirePanel("bilgilendirme");
+  await prisma.messageTemplate.delete({ where: { id: str(formData, "id") } });
+  done("ok=sablon-silindi");
 }
 
 /* ------------------------- Entegrasyon ayarlari ------------------------- */
 
 export async function updateIntegration(formData: FormData) {
-  const waEnabled = formData.get("waEnabled") === "on";
-  const autoRemindersEnabled = formData.get("autoRemindersEnabled") === "on";
-  const waPhoneNumberId = String(formData.get("waPhoneNumberId") ?? "").trim();
-  const waAccessToken = String(formData.get("waAccessToken") ?? "").trim();
-
-  const existing = await prisma.integrationSetting.findUnique({ where: { id: "main" } });
-
-  await prisma.integrationSetting.upsert({
-    where: { id: "main" },
-    update: {
-      waEnabled,
-      autoRemindersEnabled,
-      waPhoneNumberId,
-      // Token alani bos birakilirsa mevcut token korunur (her kaydetmede yeniden yazmak gerekmesin).
-      waAccessToken: waAccessToken || existing?.waAccessToken || "",
+  await requirePanel("bilgilendirme");
+  await updateIntegrationSettings(
+    {
+      waEnabled: checked(formData, "waEnabled"),
+      autoRemindersEnabled: checked(formData, "autoRemindersEnabled"),
+      waPhoneNumberId: str(formData, "waPhoneNumberId"),
     },
-    create: { id: "main", waEnabled, autoRemindersEnabled, waPhoneNumberId, waAccessToken },
-  });
-
-  redirect("/panel/bilgilendirme?ok=ayar");
+    { waAccessToken: str(formData, "waAccessToken") }
+  );
+  done("ok=ayar");
 }
 
 export async function updateNotificationChannels(formData: FormData) {
-  const emailEnabled = formData.get("emailEnabled") === "on";
-  const emailApiKey = String(formData.get("emailApiKey") ?? "").trim();
-  const emailFrom = String(formData.get("emailFrom") ?? "").trim();
-
-  const smsEnabled = formData.get("smsEnabled") === "on";
-  const smsUserCode = String(formData.get("smsUserCode") ?? "").trim();
-  const smsPassword = String(formData.get("smsPassword") ?? "").trim();
-  const smsHeader = String(formData.get("smsHeader") ?? "").trim();
-
-  const existing = await prisma.integrationSetting.findUnique({ where: { id: "main" } });
-
-  await prisma.integrationSetting.upsert({
-    where: { id: "main" },
-    update: {
-      emailEnabled,
-      emailFrom,
-      emailApiKey: emailApiKey || existing?.emailApiKey || "",
-      smsEnabled,
-      smsHeader,
-      smsUserCode,
-      smsPassword: smsPassword || existing?.smsPassword || "",
+  await requirePanel("bilgilendirme");
+  await updateIntegrationSettings(
+    {
+      emailEnabled: checked(formData, "emailEnabled"),
+      emailFrom: str(formData, "emailFrom"),
+      smsEnabled: checked(formData, "smsEnabled"),
+      smsHeader: str(formData, "smsHeader"),
+      smsUserCode: str(formData, "smsUserCode"),
     },
-    create: { id: "main", emailEnabled, emailFrom, emailApiKey, smsEnabled, smsHeader, smsUserCode, smsPassword },
-  });
-
-  redirect("/panel/bilgilendirme?ok=kanal-ayar");
+    { emailApiKey: str(formData, "emailApiKey"), smsPassword: str(formData, "smsPassword") }
+  );
+  done("ok=kanal-ayar");
 }
 
-/* ------------------------- Mesaj gonderimi ------------------------- */
+/* ------------------------- Tekil gonderim ------------------------- */
 
-/** Tek bir musteriye mesaj. API acik degilse link uretilir, log'a yazilir. */
+/** Tek bir musteriye WhatsApp mesaji. API acik degilse hazir mesaj linki uretilir. */
 export async function sendSingleMessage(formData: FormData) {
-  const guestId = String(formData.get("guestId") ?? "") || null;
-  const phone = String(formData.get("phone") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
-
-  if (!phone || !body) redirect("/panel/bilgilendirme?hata=mesaj-eksik");
+  await requirePanel("bilgilendirme");
+  const phone = str(formData, "phone");
+  const body = str(formData, "body");
+  if (!phone || !body) fail("mesaj-eksik");
 
   const result = await sendWhatsappMessage(phone, body);
-
   await prisma.messageLog.create({
-    data: {
-      guestId,
-      phone,
-      body,
-      kind: "MANUEL",
-      status: result.status,
-      errorMessage: result.errorMessage ?? null,
-    },
+    data: { guestId: optStr(formData, "guestId"), phone, body, kind: "MANUEL", status: result.status, errorMessage: result.errorMessage ?? null },
   });
+  revalidatePath("/panel", "layout");
 
-  revalidatePath("/panel/bilgilendirme");
-
-  if (result.status === "LINK_HAZIRLANDI" && result.link) {
-    // API kapaliyken: kullaniciyi dogrudan WhatsApp'a yonlendir.
-    redirect(result.link);
-  }
-  redirect(`/panel/bilgilendirme?ok=${result.status === "GONDERILDI" ? "gonderildi" : "hata"}`);
+  // API kapaliyken kullaniciyi dogrudan WhatsApp'a yonlendir.
+  if (result.status === "LINK_HAZIRLANDI" && result.link) redirect(result.link);
+  done(`ok=${result.status === "GONDERILDI" ? "gonderildi" : "hata"}`);
 }
 
 export async function sendSingleEmail(formData: FormData) {
-  const guestId = String(formData.get("guestId") ?? "") || null;
-  const to = String(formData.get("to") ?? "").trim();
-  const subject = String(formData.get("subject") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
+  await requirePanel("bilgilendirme");
+  const to = str(formData, "to");
+  const subject = str(formData, "subject");
+  const body = str(formData, "body");
+  if (!to || !subject || !body) fail("eposta-eksik");
 
-  if (!to || !subject || !body) redirect("/panel/bilgilendirme?hata=eposta-eksik");
-
-  const settings = await prisma.integrationSetting.findUnique({ where: { id: "main" } });
-  const result = await sendEmail(
-    {
-      emailEnabled: settings?.emailEnabled ?? false,
-      emailApiKey: settings?.emailApiKey ?? "",
-      emailFrom: settings?.emailFrom ?? "",
-    },
-    to,
-    subject,
-    body.replace(/\n/g, "<br>")
-  );
-
+  const result = await sendEmail(await getIntegrationSettings(), to, subject, textToHtml(body));
   await prisma.messageLog.create({
     data: {
-      guestId,
+      guestId: optStr(formData, "guestId"),
       phone: to,
       body: `[E-POSTA] ${subject}\n${body}`,
       kind: "MANUEL",
@@ -166,33 +137,19 @@ export async function sendSingleEmail(formData: FormData) {
       errorMessage: result.error ?? null,
     },
   });
-
-  revalidatePath("/panel/bilgilendirme");
-  redirect(`/panel/bilgilendirme?ok=${result.ok ? "eposta-gonderildi" : "eposta-hata"}`);
+  done(`ok=${result.ok ? "eposta-gonderildi" : "eposta-hata"}`);
 }
 
 export async function sendSingleSms(formData: FormData) {
-  const guestId = String(formData.get("guestId") ?? "") || null;
-  const phone = String(formData.get("phone") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
+  await requirePanel("bilgilendirme");
+  const phone = str(formData, "phone");
+  const body = str(formData, "body");
+  if (!phone || !body) fail("sms-eksik");
 
-  if (!phone || !body) redirect("/panel/bilgilendirme?hata=sms-eksik");
-
-  const settings = await prisma.integrationSetting.findUnique({ where: { id: "main" } });
-  const result = await sendSms(
-    {
-      smsEnabled: settings?.smsEnabled ?? false,
-      smsUserCode: settings?.smsUserCode ?? "",
-      smsPassword: settings?.smsPassword ?? "",
-      smsHeader: settings?.smsHeader ?? "",
-    },
-    normalizePhone(phone),
-    body
-  );
-
+  const result = await sendSms(await getIntegrationSettings(), normalizePhone(phone), body);
   await prisma.messageLog.create({
     data: {
-      guestId,
+      guestId: optStr(formData, "guestId"),
       phone,
       body: `[SMS] ${body}`,
       kind: "MANUEL",
@@ -200,108 +157,80 @@ export async function sendSingleSms(formData: FormData) {
       errorMessage: result.error ?? null,
     },
   });
-
-  revalidatePath("/panel/bilgilendirme");
-  redirect(`/panel/bilgilendirme?ok=${result.ok ? "sms-gonderildi" : "sms-hata"}`);
+  done(`ok=${result.ok ? "sms-gonderildi" : "sms-hata"}`);
 }
 
-/** Secilen musterilere toplu gonderim. */
-export async function sendBulkMessage(formData: FormData) {
-  const guestIds = formData.getAll("guestIds") as string[];
-  const templateBody = String(formData.get("body") ?? "").trim();
+/* ------------------------- Toplu gonderim ------------------------- */
 
-  if (!templateBody || guestIds.length === 0) redirect("/panel/bilgilendirme?hata=toplu-eksik");
+/** Secilen musterilere, sablondaki yer tutucular doldurularak toplu gonderim. */
+export async function sendBulkMessage(formData: FormData) {
+  await requirePanel("bilgilendirme");
+  const guestIds = strList(formData, "guestIds").filter(Boolean);
+  const template = str(formData, "body");
+  if (!template || guestIds.length === 0) fail("toplu-eksik");
 
   const guests = await prisma.guest.findMany({
     where: { id: { in: guestIds } },
-    include: {
-      reservations: { orderBy: { checkIn: "desc" }, take: 1, include: { room: true, payments: true } },
-    },
+    include: { reservations: { orderBy: { checkIn: "desc" }, take: 1, include: { room: true, payments: { select: { amount: true } } } } },
   });
 
-  let sent = 0;
-  let prepared = 0;
-  let failed = 0;
-
-  for (const g of guests) {
-    const res = g.reservations[0];
-    const paid = res ? res.payments.reduce((s: number, p: { amount: number }) => s + p.amount, 0) : 0;
-    const body = renderTemplate(templateBody, {
-      ad: g.fullName,
-      oda: res ? String(res.room.number) : "",
-      tutar: res ? fmtMoney(Math.max(0, res.totalAmount - paid)) : "",
+  const tally = createTally();
+  for (const guest of guests) {
+    const reservation = guest.reservations[0];
+    const paid = reservation?.payments.reduce((s, p) => s + p.amount, 0) ?? 0;
+    const body = fillPlaceholders(template, {
+      ad: guest.fullName,
+      oda: reservation ? String(reservation.room.number) : "",
+      tutar: reservation ? fmtMoney(Math.max(0, reservation.totalAmount - paid)) : "",
       tarih: fmtDate(new Date()),
-      kod: g.portalCode,
+      kod: reservation?.code ?? "",
     });
 
-    const result = await sendWhatsappMessage(g.phone, body);
-    if (result.status === "GONDERILDI") sent++;
-    else if (result.status === "LINK_HAZIRLANDI") prepared++;
-    else failed++;
-
+    const result = await sendWhatsappMessage(guest.phone, body);
+    tally.add(result.status);
     await prisma.messageLog.create({
-      data: {
-        guestId: g.id,
-        phone: g.phone,
-        body,
-        kind: "TOPLU",
-        status: result.status,
-        errorMessage: result.errorMessage ?? null,
-      },
+      data: { guestId: guest.id, phone: guest.phone, body, kind: "TOPLU", status: result.status, errorMessage: result.errorMessage ?? null },
     });
   }
 
-  revalidatePath("/panel/bilgilendirme");
-  redirect(`/panel/bilgilendirme?ok=toplu&gonderildi=${sent}&hazir=${prepared}&hata=${failed}`);
+  done(tally.query("toplu"));
 }
 
 /** Odeme gunu gelmis musterilere hatirlatma. Ayni ay icinde ikinci kez gonderilmez. */
 export async function sendPaymentReminders(formData: FormData) {
-  const onlyReservationId = String(formData.get("reservationId") ?? "") || null;
+  await requirePanel("bilgilendirme");
+  const onlyReservationId = optStr(formData, "reservationId");
 
-  const template = await prisma.messageTemplate.findUnique({ where: { key: "odeme-hatirlatma" } });
-  if (!template) redirect("/panel/bilgilendirme?hata=sablon-yok");
+  const template = await prisma.messageTemplate.findUnique({ where: { key: PAYMENT_REMINDER_TEMPLATE } });
+  if (!template) fail("sablon-yok");
 
-  const today = startOfDay(new Date());
-  const periodKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const periodKey = currentPeriodKey();
+  const [due, remindedIds] = await Promise.all([getUpcomingPayments(0), getRemindedReservationIds(periodKey)]);
+  const targets = due.filter(
+    (d) => !remindedIds.has(d.reservation.id) && (!onlyReservationId || d.reservation.id === onlyReservationId)
+  );
 
-  const due = await getUpcomingPayments(0);
-  const targets = onlyReservationId ? due.filter((d) => d.reservation.id === onlyReservationId) : due;
+  const tally = createTally();
+  let singleLink: string | undefined;
 
-  const alreadySent = await prisma.messageLog.findMany({
-    where: { kind: "ODEME_HATIRLATMA", periodKey, status: { in: ["GONDERILDI", "LINK_HAZIRLANDI"] } },
-    select: { reservationId: true },
-  });
-  const sentIds = new Set(alreadySent.map((m: { reservationId: string | null }) => m.reservationId));
-
-  let sent = 0;
-  let prepared = 0;
-  let failed = 0;
-  let singleLink: string | null = null;
-
-  for (const d of targets) {
-    if (sentIds.has(d.reservation.id)) continue;
-
-    const body = renderTemplate(template.body, {
-      ad: d.guest.fullName,
-      oda: String(d.room.number),
-      tutar: fmtMoney(d.amount),
-      tarih: fmtDate(d.dueDate),
-      kod: "",
+  for (const target of targets) {
+    const body = fillPlaceholders(template.body, {
+      ad: target.guest.fullName,
+      oda: String(target.room.number),
+      tutar: fmtMoney(target.amount),
+      tarih: fmtDate(target.dueDate),
+      kod: target.reservation.code,
     });
 
-    const result = await sendWhatsappMessage(d.guest.phone, body);
-    if (result.status === "GONDERILDI") sent++;
-    else if (result.status === "LINK_HAZIRLANDI") {
-      prepared++;
-      if (onlyReservationId) singleLink = result.link ?? null;
-    } else failed++;
+    const result = await sendWhatsappMessage(target.guest.phone, body);
+    tally.add(result.status);
+    if (onlyReservationId && result.status === "LINK_HAZIRLANDI") singleLink = result.link;
 
     await prisma.messageLog.create({
       data: {
-        guestId: d.guest.id,
-        reservationId: d.reservation.id,
-        phone: d.guest.phone,
+        guestId: target.guest.id,
+        reservationId: target.reservation.id,
+        phone: target.guest.phone,
         body,
         kind: "ODEME_HATIRLATMA",
         periodKey,
@@ -311,9 +240,7 @@ export async function sendPaymentReminders(formData: FormData) {
     });
   }
 
-  revalidatePath("/panel/bilgilendirme");
-  revalidatePath("/panel");
-
+  revalidatePath("/panel", "layout");
   if (singleLink) redirect(singleLink);
-  redirect(`/panel/bilgilendirme?ok=hatirlatma&gonderildi=${sent}&hazir=${prepared}&hata=${failed}`);
+  done(tally.query("hatirlatma"));
 }

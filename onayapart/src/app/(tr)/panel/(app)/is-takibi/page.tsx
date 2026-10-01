@@ -2,6 +2,7 @@ import { prisma } from "@/shared/lib/db";
 import { fmtDate } from "@/shared/lib/dates";
 import StatCard from "@/shared/components/panel/StatCard";
 import { createStaffTask, addStaffTaskReply, updateStaffTaskStatus } from "@/features/staff/task-actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function StaffTaskPage({
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("istakibi");
   const [tasksAll, employees] = await Promise.all([
     prisma.staffTask.findMany({
       orderBy: { createdAt: "desc" },

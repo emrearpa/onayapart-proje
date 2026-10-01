@@ -68,9 +68,3 @@ export async function getPublishedRoomPaths() {
   ]);
   return { types, rooms };
 }
-
-/** "/odalar/<tip>/oda-205" adresindeki son parcadan oda numarasini cikarir. */
-export function roomNumberFromSlug(slug: string): number | null {
-  const match = /^oda-(\d+)$/.exec(slug);
-  return match ? Number(match[1]) : null;
-}

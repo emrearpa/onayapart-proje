@@ -2,18 +2,18 @@
 
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { chartColors } from "@/features/accounting/components/chart-colors";
+import { fmtMoneyRounded } from "@/shared/lib/dates";
+import type { ChartTooltipProps } from "@/features/accounting/components/charts/tooltip";
 
 export type RevenuePoint = { label: string; amount: number };
 
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-line bg-white px-3 py-2 text-xs shadow-card">
       <div className="font-bold text-ink">{label}</div>
       <div className="mt-0.5 text-brand-600">
-        {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(
-          payload[0].value
-        )}
+        {fmtMoneyRounded(payload[0].value)}
       </div>
     </div>
   );

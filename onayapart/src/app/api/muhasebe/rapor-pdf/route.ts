@@ -1,23 +1,21 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { getFinanceTotals, getExpenseByCategory, getIncomeByMethod, getAccountSummaries, getMonthlyProfitLoss } from "@/features/accounting/queries";
+import { fileResponse, jsonError } from "@/shared/lib/http";
+import { can, getPanelSession } from "@/features/auth/guards";
 import { resolveRange } from "@/features/accounting/date-range";
+import {
+  getAccountSummaries,
+  getExpenseByCategory,
+  getFinanceTotals,
+  getIncomeByMethod,
+  getMonthlyProfitLoss,
+} from "@/features/accounting/queries";
 import { generateReportPdf } from "@/features/accounting/report-pdf";
 
-/** Muhasebe rapor PDF'i - sadece tam admin girisiyle indirilebilir. */
+/** Muhasebe rapor PDF'i (admin ya da "On Muhasebe" yetkisi). */
 export async function GET(req: Request) {
-  const panelCookie = cookies().get("oa_panel")?.value;
-  const isAdmin = Boolean(panelCookie) && Boolean(process.env.PANEL_PASSWORD) && panelCookie === process.env.PANEL_PASSWORD;
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Bu raporu indirme yetkiniz yok." }, { status: 403 });
-  }
+  if (!can(await getPanelSession(), "muhasebe")) return jsonError("Bu raporu indirme yetkiniz yok.", 403);
 
-  const url = new URL(req.url);
-  const range = resolveRange(
-    url.searchParams.get("aralik") ?? undefined,
-    url.searchParams.get("bas") ?? undefined,
-    url.searchParams.get("bit") ?? undefined
-  );
+  const query = new URL(req.url).searchParams;
+  const range = resolveRange(query.get("aralik") ?? undefined, query.get("bas") ?? undefined, query.get("bit") ?? undefined);
 
   const [totals, expenseByCategory, incomeByMethod, accountSummaries, monthlyReport] = await Promise.all([
     getFinanceTotals(range.start, range.end),
@@ -27,7 +25,7 @@ export async function GET(req: Request) {
     getMonthlyProfitLoss(12),
   ]);
 
-  const pdfBytes = await generateReportPdf({
+  const pdf = await generateReportPdf({
     rangeLabel: range.label,
     generatedAt: new Date(),
     totals,
@@ -37,10 +35,5 @@ export async function GET(req: Request) {
     monthlyReport,
   });
 
-  return new NextResponse(Buffer.from(pdfBytes), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="on-muhasebe-raporu-${range.preset}.pdf"`,
-    },
-  });
+  return fileResponse(pdf, "application/pdf", { fileName: `on-muhasebe-raporu-${range.preset}.pdf`, download: true });
 }

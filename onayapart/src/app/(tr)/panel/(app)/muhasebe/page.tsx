@@ -5,6 +5,8 @@ import { fmtMoney, fmtDate } from "@/shared/lib/dates";
 import StatCard from "@/shared/components/panel/StatCard";
 import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
 import { createAccount, updateIyzicoSettings } from "@/features/accounting/actions";
+import { requirePanel } from "@/features/auth/guards";
+import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from "@/features/reservations/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +20,13 @@ const ERRORS: Record<string, string> = {
   "hesap-eksik": "Hesap adı zorunludur.",
 };
 const ACCOUNT_TYPE_LABEL: Record<string, string> = { KASA: "Kasa", BANKA: "Banka / POS" };
-const METHOD_LABEL: Record<string, string> = { NAKIT: "Nakit", KART: "Kart", HAVALE: "Havale" };
 
 export default async function AccountingOverviewPage({
   searchParams,
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("muhasebe");
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);

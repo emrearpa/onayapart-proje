@@ -42,3 +42,8 @@ export function fmtMoney(n: number) {
 export function toInputDate(d: Date) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
+
+/** Grafik eksenleri ve ozet kutulari icin kurussuz gosterim (1.250 ₺). */
+export function fmtMoneyRounded(n: number) {
+  return `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 0 }).format(n)} ₺`;
+}

@@ -3,10 +3,12 @@ import { prisma } from "@/shared/lib/db";
 import { fmtDate } from "@/shared/lib/dates";
 import { PERMISSIONS } from "@/features/auth/permissions";
 import SearchBox from "@/shared/components/panel/SearchBox";
+import { requireAdmin } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage({ searchParams }: { searchParams: { q?: string } }) {
+  await requireAdmin();
   const usersAll = await prisma.staffUser.findMany({
     orderBy: { createdAt: "desc" },
     include: { employee: true },

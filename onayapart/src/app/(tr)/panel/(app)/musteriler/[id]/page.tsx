@@ -8,16 +8,11 @@ import { createExtraGuest, deleteExtraGuest, addRoomServiceCharge, deleteRoomSer
 import ConfirmButton from "@/shared/components/ConfirmButton";
 import PhoneInput from "@/shared/components/panel/PhoneInput";
 import PaymentRowForm from "@/features/reservations/components/PaymentRowForm";
+import { requirePanel } from "@/features/auth/guards";
+import { RESERVATION_STATUS_LABEL } from "@/features/reservations/constants";
 
 export const dynamic = "force-dynamic";
 
-const RES_STATUS_LABEL: Record<string, string> = {
-  OPSIYON: "Opsiyon",
-  ONAYLI: "Onaylı",
-  GIRIS_YAPTI: "Giriş yaptı",
-  TAMAMLANDI: "Çıkış Yaptı",
-  IPTAL: "İptal",
-};
 
 export default async function GuestDetailPage({
   params,
@@ -26,6 +21,7 @@ export default async function GuestDetailPage({
   params: { id: string };
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("musteriler");
   const [guest, menuItems, accounts] = await Promise.all([
     prisma.guest.findUnique({
       where: { id: params.id },
@@ -244,7 +240,7 @@ export default async function GuestDetailPage({
                         💰 {fmtMoney(r.deposit)} depozito
                       </span>
                     )}
-                    <span className="ml-auto text-xs">{RES_STATUS_LABEL[r.status] ?? r.status}</span>
+                    <span className="ml-auto text-xs">{RESERVATION_STATUS_LABEL[r.status] ?? r.status}</span>
                     <span className="font-bold">{fmtMoney(r.totalAmount)}</span>
                   </summary>
 

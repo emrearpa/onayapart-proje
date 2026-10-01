@@ -7,16 +7,16 @@ import { str } from "@/shared/lib/form";
 import { SESSION_COOKIES, createSessionToken, isAdminPassword, sessionCookieOptions } from "@/features/auth/session";
 import { verifyPassword } from "@/features/auth/password";
 import { PANEL_LOGIN_PATH, parsePermissions, pathForPermission } from "@/features/auth/permissions";
-import { clearLoginAttempts, consumeLoginAttempt } from "@/features/auth/rate-limit";
+import { clearAttempts, consumeAttempt } from "@/shared/lib/rate-limit";
 
 export async function login(formData: FormData) {
-  if (!consumeLoginAttempt("admin")) redirect(`${PANEL_LOGIN_PATH}?hata=cok-deneme`);
+  if (!consumeAttempt("admin")) redirect(`${PANEL_LOGIN_PATH}?hata=cok-deneme`);
 
   // Sifre ham haliyle okunur (trim edilmez).
   const password = String(formData.get("password") ?? "");
   if (!(await isAdminPassword(password))) redirect(`${PANEL_LOGIN_PATH}?hata=1`);
 
-  clearLoginAttempts("admin");
+  clearAttempts("admin");
   const store = cookies();
   store.set(SESSION_COOKIES.admin, await createSessionToken("admin", {}), sessionCookieOptions("admin"));
   store.delete(SESSION_COOKIES.staff);
@@ -26,7 +26,7 @@ export async function login(formData: FormData) {
 /** Sinirli yetkili personel girisi. Basariliysa imzali bir oturum cerezi yazar. */
 export async function staffLogin(formData: FormData) {
   const failure = `${PANEL_LOGIN_PATH}?hata=personel`;
-  if (!consumeLoginAttempt("staff")) redirect(`${PANEL_LOGIN_PATH}?hata=cok-deneme`);
+  if (!consumeAttempt("staff")) redirect(`${PANEL_LOGIN_PATH}?hata=cok-deneme`);
 
   const username = str(formData, "username").toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -38,7 +38,7 @@ export async function staffLogin(formData: FormData) {
   const permissions = parsePermissions(user.permissions);
   if (permissions.length === 0) redirect(failure);
 
-  clearLoginAttempts("staff");
+  clearAttempts("staff");
   const store = cookies();
   store.set(
     SESSION_COOKIES.staff,

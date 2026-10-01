@@ -2,10 +2,12 @@ import { prisma } from "@/shared/lib/db";
 import { fmtDate } from "@/shared/lib/dates";
 import { handleLead } from "@/features/leads/actions";
 import SearchBox from "@/shared/components/panel/SearchBox";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage({ searchParams }: { searchParams: { q?: string } }) {
+  await requirePanel("talepler");
   const leadsAll = await prisma.lead.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
 
   const q = (searchParams.q ?? "").trim().toLowerCase();

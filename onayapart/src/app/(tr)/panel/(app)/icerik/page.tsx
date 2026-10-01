@@ -5,6 +5,7 @@ import { locales, localeConfig, parseEnabledLocales } from "@/shared/i18n/config
 import ConfirmButton from "@/shared/components/ConfirmButton";
 import TranslationFields from "@/features/content/components/TranslationFields";
 import { updateSiteSettings, updateEnabledLocales, createAmenity, updateAmenity, deleteAmenity, createFaq, updateFaq, deleteFaq, createTestimonial, updateTestimonial, deleteTestimonial } from "@/features/content/actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ const MESSAGES: Record<string, string> = {
   diller: "Site dilleri güncellendi.",
 };
 const ERRORS: Record<string, string> = {
+  "iletisim-eksik": "Telefon, adres ve ana sayfa başlığı boş bırakılamaz.",
   "olanak-eksik": "Olanak adı ve etiketi boş bırakılamaz.",
   "olanak-cakisma": "Bu isimde bir olanak zaten var.",
   "sss-eksik": "Soru ve cevap alanları boş bırakılamaz.",
@@ -33,6 +35,7 @@ export default async function ContentPage({
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("icerik");
   const [settings, amenities, faqs, testimonials] = await Promise.all([
     getSiteSettings(),
     prisma.amenity.findMany({ orderBy: { sort: "asc" } }),

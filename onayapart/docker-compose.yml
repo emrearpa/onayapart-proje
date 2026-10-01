@@ -1,0 +1,67 @@
+# Tek sunucuda (VPS) calistirmak icin: PostgreSQL + uygulama.
+#
+#   1) .env dosyasini doldurun (POSTGRES_PASSWORD, PANEL_PASSWORD, SESSION_SECRET, CRON_SECRET, NEXT_PUBLIC_SITE_URL)
+#   2) docker compose up -d db          # once veritabani
+#   3) docker compose build app         # derleme veritabanina host portu uzerinden baglanir
+#   4) docker compose up -d app
+#   5) ilk kurulumda:  docker compose run --rm seed
+#
+# Uygulama 127.0.0.1:3000'de dinler; onune HTTPS sonlandiran bir ters vekil (Nginx/Caddy) koyun.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: onayapart
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD .env icinde tanimli olmali}
+      POSTGRES_DB: onayapart
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onayapart"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      network: host
+      args:
+        DATABASE_URL: postgresql://onayapart:${POSTGRES_PASSWORD}@127.0.0.1:5432/onayapart
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://onayapart:${POSTGRES_PASSWORD}@db:5432/onayapart
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      PANEL_PASSWORD: ${PANEL_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      CRON_SECRET: ${CRON_SECRET}
+    volumes:
+      - uploads:/data/uploads
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  # Ilk kurulumda baslangic verisini (oda tipleri, daireler, sablonlar) yukler.
+  seed:
+    image: node:20-alpine
+    profiles: ["tools"]
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: postgresql://onayapart:${POSTGRES_PASSWORD}@db:5432/onayapart
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "apk add --no-cache openssl && npm ci && npm run db:seed"
+
+volumes:
+  db-data:
+  uploads:

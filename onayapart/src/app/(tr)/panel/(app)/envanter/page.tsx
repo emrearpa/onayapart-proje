@@ -13,6 +13,7 @@ import {
   transferStock,
   recordStockOut,
 } from "@/features/inventory/actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export default async function InventoryPage({
 }: {
   searchParams: { ok?: string; hata?: string; q?: string };
 }) {
+  await requirePanel("envanter");
   const q = (searchParams.q ?? "").trim().toLowerCase();
   const [{ items, locations }, rooms, recentMovements] = await Promise.all([
     getInventoryItemsWithStock(),

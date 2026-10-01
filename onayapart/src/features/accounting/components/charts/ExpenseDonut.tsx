@@ -2,21 +2,19 @@
 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { expenseCategoryColors } from "@/features/accounting/components/chart-colors";
+import { fmtMoneyRounded } from "@/shared/lib/dates";
+import type { ChartTooltipProps } from "@/features/accounting/components/charts/tooltip";
 
 export type SlicePoint = { label: string; amount: number };
 
-function money(v: number) {
-  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(v);
-}
-
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({ active, payload }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   const p = payload[0];
   return (
     <div className="rounded-xl border border-line bg-white px-3 py-2 text-xs shadow-card">
       <div className="font-bold text-ink">{p.name}</div>
       <div className="mt-0.5" style={{ color: p.payload.fill }}>
-        {money(p.value)}
+        {fmtMoneyRounded(p.value)}
       </div>
     </div>
   );
@@ -46,7 +44,7 @@ export default function ExpenseDonut({ data }: { data: SlicePoint[] }) {
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: expenseCategoryColors[i % expenseCategoryColors.length] }} />
               {d.label}
             </span>
-            <span className="font-bold text-ink">{money(d.amount)}</span>
+            <span className="font-bold text-ink">{fmtMoneyRounded(d.amount)}</span>
           </li>
         ))}
       </ul>

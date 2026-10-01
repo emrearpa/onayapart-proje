@@ -1,74 +1,35 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/shared/lib/db";
+import { fileResponse, jsonError } from "@/shared/lib/http";
+import { can, getGuestId, getPanelSession } from "@/features/auth/guards";
 import { getSiteSettings } from "@/features/content/queries";
 import { generateContractPdf } from "@/features/reservations/contract";
 
 /**
- * Sozlesme indirme. Iki turlu erisim kabul edilir:
- *  - Panel cookie'si (oa_panel) dogruysa: herhangi bir rezervasyonun sozlesmesi indirilebilir (admin).
- *  - Musteri cookie'si (oa_guest) varsa: sadece kendi rezervasyonunun sozlesmesi indirilebilir.
- * Ikisi de yoksa/eslesmiyorsa 403 doner.
+ * Sozlesme indirme. Iki tur erisim kabul edilir:
+ *  - Panel oturumu (admin ya da rezervasyon/musteri yetkili personel): her sozlesme.
+ *  - Misafir oturumu: yalnizca kendi rezervasyonunun sozlesmesi.
  */
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  const [panelSession, guestId] = await Promise.all([getPanelSession(), getGuestId()]);
+  const isStaff = can(panelSession, "rezervasyonlar", "musteriler");
+  if (!isStaff && !guestId) return jsonError("Bu sözleşmeyi görüntüleme yetkiniz yok.", 403);
+
   const reservation = await prisma.reservation.findUnique({
     where: { id: params.id },
     include: { guest: true, room: { include: { type: true, assets: true } }, extraGuests: { orderBy: { createdAt: "asc" } } },
   });
+  // Yetkisiz misafire kaydin var olup olmadigi da soylenmez.
+  if (!reservation || (!isStaff && reservation.guestId !== guestId)) return jsonError("Rezervasyon bulunamadı.", 404);
 
-  if (!reservation) {
-    return NextResponse.json({ error: "Rezervasyon bulunamadı." }, { status: 404 });
-  }
-
-  const cookieStore = cookies();
-  const panelCookie = cookieStore.get("oa_panel")?.value;
-  const isAdmin = Boolean(panelCookie) && Boolean(process.env.PANEL_PASSWORD) && panelCookie === process.env.PANEL_PASSWORD;
-  const guestId = cookieStore.get("oa_guest")?.value;
-  const isOwner = Boolean(guestId) && guestId === reservation.guestId;
-
-  if (!isAdmin && !isOwner) {
-    return NextResponse.json({ error: "Bu sözleşmeyi görüntüleme yetkiniz yok." }, { status: 403 });
-  }
-
-  const settings = await getSiteSettings();
-
-  const pdfBytes = await generateContractPdf({
-    reservation: {
-      code: reservation.code,
-      checkIn: reservation.checkIn,
-      checkOut: reservation.checkOut,
-      stayType: reservation.stayType,
-      totalAmount: reservation.totalAmount,
-      deposit: reservation.deposit,
-      createdAt: reservation.createdAt,
-    },
-    guest: {
-      fullName: reservation.guest.fullName,
-      phone: reservation.guest.phone,
-      email: reservation.guest.email,
-      idType: reservation.guest.idType,
-      idNumber: reservation.guest.idNumber,
-      birthDate: reservation.guest.birthDate,
-      nationality: reservation.guest.nationality,
-      address: reservation.guest.address,
-    },
-    room: { number: reservation.room.number, floor: reservation.room.floor, m2: reservation.room.m2 },
-    roomType: { name: reservation.room.type.name, code: reservation.room.type.code },
-    assets: reservation.room.assets.map((a) => ({ name: a.name, quantity: a.quantity })),
-    extraGuests: reservation.extraGuests.map((eg) => ({ fullName: eg.fullName, idType: eg.idType, idNumber: eg.idNumber })),
-    settings: {
-      phoneDisplay: settings.phoneDisplay,
-      addressStreet: settings.addressStreet,
-      addressDistrict: settings.addressDistrict,
-      addressCity: settings.addressCity,
-      addressPostalCode: settings.addressPostalCode,
-    },
+  const pdf = await generateContractPdf({
+    reservation,
+    guest: reservation.guest,
+    room: reservation.room,
+    roomType: reservation.room.type,
+    assets: reservation.room.assets,
+    extraGuests: reservation.extraGuests,
+    settings: await getSiteSettings(),
   });
 
-  return new NextResponse(Buffer.from(pdfBytes), {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="sozlesme-${reservation.code}.pdf"`,
-    },
-  });
+  return fileResponse(pdf, "application/pdf", { fileName: `sozlesme-${reservation.code}.pdf`, download: true });
 }

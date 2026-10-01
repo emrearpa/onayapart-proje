@@ -1,12 +1,22 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import Icon from "@/shared/components/panel/Icon";
 import { login, staffLogin } from "@/features/auth/actions";
 import LoginTabs from "@/features/auth/components/LoginTabs";
-import Icon from "@/shared/components/panel/Icon";
+import { getPanelSession } from "@/features/auth/guards";
+import { pathForPermission } from "@/features/auth/permissions";
+import { getSiteSettings } from "@/features/content/queries";
+import { site } from "@/shared/lib/site";
 
-export const metadata = { title: "Panel girişi", robots: { index: false } };
+export const metadata = { title: "Panel girişi" };
 
-export default function LoginPage({ searchParams }: { searchParams: { hata?: string } }) {
-  const initialTab = searchParams.hata === "personel" ? "personel" : "admin";
+export default async function LoginPage({ searchParams }: { searchParams: { hata?: string } }) {
+  const session = await getPanelSession();
+  if (session?.role === "admin") redirect("/panel");
+  if (session?.role === "staff" && session.permissions[0]) redirect(pathForPermission(session.permissions[0]));
+
+  const { addressCity, addressDistrict } = await getSiteSettings();
+  const error = searchParams.hata;
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-b from-brand-900 via-brand-900 to-[#081f16] px-5 py-12">
@@ -22,16 +32,24 @@ export default function LoginPage({ searchParams }: { searchParams: { hata?: str
           <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-gold-500/30 bg-white/5 text-gold-500">
             <Icon name="door" className="h-7 w-7" />
           </div>
-          <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-white">Onay Apart</h1>
-          <p className="mt-1 text-sm font-medium text-white/50">Erzurum Yakutiye · Yönetim girişi</p>
+          <h1 className="mt-4 text-4xl font-extrabold tracking-tight text-white">{site.shortName}</h1>
+          <p className="mt-1 text-sm font-medium text-white/50">
+            {addressCity} {addressDistrict} · Yönetim girişi
+          </p>
         </div>
+
+        {error === "cok-deneme" && (
+          <p className="mb-4 rounded-xl bg-red-500/15 p-4 text-sm font-semibold text-red-100">
+            Çok fazla hatalı deneme yapıldı. Lütfen 15 dakika sonra tekrar deneyin.
+          </p>
+        )}
 
         <LoginTabs
           login={login}
           staffLogin={staffLogin}
-          initialTab={initialTab}
-          adminError={searchParams.hata === "1"}
-          staffError={searchParams.hata === "personel"}
+          initialTab={error === "personel" ? "personel" : "admin"}
+          adminError={error === "1"}
+          staffError={error === "personel"}
         />
 
         <Link

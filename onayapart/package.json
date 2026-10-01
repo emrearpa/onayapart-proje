@@ -1,23 +1,35 @@
 {
   "name": "onayapart",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.18"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "check": "npm run typecheck && npm run lint && npm test",
+    "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "setup": "prisma db push && tsx prisma/seed.ts"
+    "setup": "prisma migrate deploy && tsx prisma/seed.ts",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@pdf-lib/fontkit": "^1.1.1",
     "@prisma/client": "5.22.0",
     "iyzipay": "^2.0.69",
-    "next": "14.2.30",
+    "next": "14.2.35",
     "pdf-lib": "^1.17.1",
+    "prisma": "5.22.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "recharts": "^3.10.1"
@@ -27,8 +39,9 @@
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "autoprefixer": "10.4.19",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.35",
     "postcss": "8.4.39",
-    "prisma": "5.22.0",
     "tailwindcss": "3.4.6",
     "tsx": "4.16.2",
     "typescript": "5.5.3"

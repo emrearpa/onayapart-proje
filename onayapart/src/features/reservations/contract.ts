@@ -13,7 +13,8 @@ import {
   type PdfCtx,
 } from "@/shared/lib/pdf-kit";
 import { fmtDate, fmtMoney } from "@/shared/lib/dates";
-import { fullAddress } from "@/shared/lib/site";
+import { fullAddress, site } from "@/shared/lib/site";
+import { STAY_TYPE_LABEL } from "@/features/reservations/constants";
 
 export type ContractInput = {
   reservation: {
@@ -48,15 +49,7 @@ export type ContractInput = {
   };
 };
 
-const STAY_LABEL: Record<string, string> = {
-  GUNLUK: "Günlük",
-  HAFTALIK: "Haftalık",
-  AYLIK: "Aylık",
-  DONEMLIK: "Öğrenci dönemlik",
-  YILLIK: "Yıllık",
-  KURUMSAL: "Kurumsal",
-};
-
+/** Genel sartlar. {sehir}, isletmenin panelde kayitli sehriyle doldurulur. */
 const CLAUSES = [
   "1. Kiracı, işbu sözleşmede belirtilen daireyi yukarıda yazılı giriş ve çıkış tarihleri arasında, belirtilen bedel karşılığında konaklama amacıyla kullanacağını kabul eder.",
   "2. Konaklama bedeli, sözleşmenin imzalandığı tarihte veya taraflarca mutabık kalınan ödeme planına göre nakit, kredi kartı ya da havale yoluyla ödenir. Aylık ve dönemlik konaklamalarda ödeme, giriş tarihine denk gelen gün esas alınarak her ay tekrarlanır. Yıllık konaklamalarda toplam bedel eşit 12 taksite bölünerek, giriş tarihine denk gelen gün esas alınmak üzere her ay tahsil edilir.",
@@ -66,7 +59,7 @@ const CLAUSES = [
   "6. Kiracı, dairede veya bina genelinde çevreye rahatsızlık verecek gürültü ve davranışlardan kaçınmayı, işletme kurallarına ve bina yönetim planına uymayı kabul eder.",
   "7. Belirlenen çıkış tarihinden önce ayrılma (erken çıkış) durumunda, ödenen bedelin iadesi işletmenin iptal politikasına tabidir.",
   "8. Kiracının kimlik bilgileri, ilgili mevzuat gereğince resmi kimlik bildirim sistemine (KBS) bildirilir.",
-  "9. İşbu sözleşmeden doğacak uyuşmazlıklarda Erzurum Mahkemeleri ve İcra Daireleri yetkilidir.",
+  "9. İşbu sözleşmeden doğacak uyuşmazlıklarda {sehir} Mahkemeleri ve İcra Daireleri yetkilidir.",
   "10. Taraflar, işbu sözleşmeyi ve yukarıdaki maddeleri okuyup anladıklarını, aşağıya atacakları imza ile kabul ettiklerini beyan ederler.",
 ];
 
@@ -85,7 +78,7 @@ export async function generateContractPdf(input: ContractInput): Promise<Uint8Ar
   drawDivider(ctx);
 
   drawHeading(ctx, "A. KİRALAYAN (İŞLETME)");
-  drawRow(ctx, "Unvan", "Onay Apart Rezidans");
+  drawRow(ctx, "Unvan", site.name);
   drawRow(ctx, "Adres", fullAddress(settings));
   drawRow(ctx, "Telefon", settings.phoneDisplay);
 
@@ -102,7 +95,7 @@ export async function generateContractPdf(input: ContractInput): Promise<Uint8Ar
   drawRow(ctx, "Daire No / Tipi", `${room.number} — ${roomType.name}`);
   drawRow(ctx, "Giriş Tarihi", fmtDate(reservation.checkIn));
   drawRow(ctx, "Çıkış Tarihi", fmtDate(reservation.checkOut));
-  drawRow(ctx, "Konaklama Türü", STAY_LABEL[reservation.stayType] ?? reservation.stayType);
+  drawRow(ctx, "Konaklama Türü", STAY_TYPE_LABEL[reservation.stayType] ?? reservation.stayType);
   drawRow(ctx, "Toplam Bedel", fmtMoney(reservation.totalAmount));
   drawRow(ctx, "Alınan Depozito", fmtMoney(reservation.deposit));
 
@@ -130,7 +123,7 @@ export async function generateContractPdf(input: ContractInput): Promise<Uint8Ar
 
   drawHeading(ctx, extraGuests.length > 0 ? "F. GENEL ŞARTLAR" : "E. GENEL ŞARTLAR");
   for (const c of CLAUSES) {
-    drawParagraph(ctx, c, { size: 9.3, lineGap: 13.5 });
+    drawParagraph(ctx, c.replace("{sehir}", settings.addressCity), { size: 9.3, lineGap: 13.5 });
     ctx.y -= 5;
   }
 
@@ -146,7 +139,7 @@ export async function generateContractPdf(input: ContractInput): Promise<Uint8Ar
   });
   ctx.y -= 14;
   ctx.page.drawText("Kiralayan (İşletme)", { x: MARGIN, y: ctx.y, size: 9.5, font: bold, color: PDF_COLORS.ink });
-  ctx.page.drawText("Onay Apart Rezidans", { x: MARGIN, y: ctx.y - 13, size: 9, font, color: PDF_COLORS.soft });
+  ctx.page.drawText(site.name, { x: MARGIN, y: ctx.y - 13, size: 9, font, color: PDF_COLORS.soft });
   ctx.page.drawText("Kiracı (Misafir)", { x: PAGE_W - MARGIN - colW, y: ctx.y, size: 9.5, font: bold, color: PDF_COLORS.ink });
   ctx.page.drawText(guest.fullName, { x: PAGE_W - MARGIN - colW, y: ctx.y - 13, size: 9, font, color: PDF_COLORS.soft });
 

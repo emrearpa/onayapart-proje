@@ -4,6 +4,7 @@ import ConfirmButton from "@/shared/components/ConfirmButton";
 import StatCard from "@/shared/components/panel/StatCard";
 import SearchBox from "@/shared/components/panel/SearchBox";
 import { closeTask, reopenTask, createTask, addTaskNote } from "@/features/maintenance/actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function MaintenancePage({
 }: {
   searchParams: { ok?: string; hata?: string; q?: string };
 }) {
+  await requirePanel("bakim");
   const q = (searchParams.q ?? "").trim().toLowerCase();
   const matches = (t: { title: string; room: { number: number }; guest: { fullName: string } | null }) =>
     !q ||

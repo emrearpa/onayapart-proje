@@ -1,27 +1,25 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/shared/lib/db";
+import { jsonError } from "@/shared/lib/http";
+import { consumeAttempt } from "@/shared/lib/rate-limit";
+import { createLead } from "@/features/leads/create-lead";
 
+/** Sitedeki "Sizi arayalim" formu. */
 export async function POST(req: Request) {
+  if (!consumeAttempt("lead")) return jsonError("Çok fazla talep gönderildi, lütfen biraz sonra tekrar deneyin.", 429);
+
+  let body: unknown;
   try {
-    const body = await req.json();
-    const name = String(body.name ?? "").trim();
-    const phone = String(body.phone ?? "").trim();
-
-    if (name.length < 2 || phone.length < 7) {
-      return NextResponse.json({ error: "Ad ve telefon zorunlu." }, { status: 400 });
-    }
-
-    await prisma.lead.create({
-      data: {
-        name,
-        phone,
-        message: String(body.message ?? "").slice(0, 1000) || null,
-        roomNumber: body.roomNumber ? Number(body.roomNumber) : null,
-      },
-    });
-
-    return NextResponse.json({ ok: true });
+    body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Talep kaydedilemedi." }, { status: 500 });
+    return jsonError("Geçersiz istek.", 400);
+  }
+  if (typeof body !== "object" || body === null) return jsonError("Geçersiz istek.", 400);
+
+  try {
+    const result = await createLead(body);
+    return result.ok ? NextResponse.json({ ok: true }) : jsonError(result.error, 400);
+  } catch (error) {
+    console.error("[talep] kaydedilemedi:", error);
+    return jsonError("Talep kaydedilemedi.", 500);
   }
 }

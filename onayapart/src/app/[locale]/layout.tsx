@@ -1,70 +1,35 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
-import { Manrope } from "next/font/google";
 import "../globals.css";
+import { isLocale, localeConfig } from "@/shared/i18n/config";
+import { getDictionary } from "@/shared/i18n/dictionaries";
 import { site } from "@/shared/lib/site";
-import { getSiteSettings } from "@/features/content/queries";
-import { isLocale, localeConfig, parseEnabledLocales, type Locale } from "@/shared/i18n/config";
-import JsonLd from "@/shared/components/JsonLd";
+import { getEnabledLocales } from "@/features/content/queries";
+import { pageAlternates } from "@/features/content/seo";
+import { toLocale, type LocaleParams } from "@/features/site/locale";
+import RootDocument from "@/features/site/components/RootDocument";
 
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
+export const viewport: Viewport = { themeColor: "#1c6045" };
 
-export async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: LocaleParams): Promise<Metadata> {
   if (!isLocale(params.locale)) return {};
   const locale = params.locale;
-  const settings = await getSiteSettings();
-  const enabledLocales = parseEnabledLocales(settings.enabledLocales);
-
-  const languageAlternates: Record<string, string> = { "x-default": "/", tr: "/" };
-  for (const l of enabledLocales) languageAlternates[l] = `/${l}`;
+  const t = getDictionary(locale).home;
 
   return {
     metadataBase: new URL(site.url),
-    alternates: { canonical: `/${locale}`, languages: languageAlternates },
-    openGraph: { locale: localeConfig[locale].htmlLang },
-    robots: { index: enabledLocales.includes(locale), follow: enabledLocales.includes(locale) },
+    title: { default: `${t.heroTitle} | ${site.shortName}`, template: `%s | ${site.shortName}` },
+    description: t.heroIntro,
+    alternates: await pageAlternates("/", locale),
+    openGraph: { type: "website", locale: localeConfig[locale].htmlLang, siteName: site.name, url: `${site.url}/${locale}` },
+    robots: { index: true, follow: true },
   };
 }
 
-export default async function LocaleLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: { locale: string };
-}) {
-  if (!isLocale(params.locale)) notFound();
-  const locale = params.locale as Locale;
-  const { dir, htmlLang } = localeConfig[locale];
-  const settings = await getSiteSettings();
+export default async function LocaleLayout({ children, params }: LocaleParams & { children: React.ReactNode }) {
+  const locale = toLocale(params.locale);
+  // Dil panelden kapatilmissa dogrudan linkle bile girilemez.
+  if (!(await getEnabledLocales()).includes(locale)) notFound();
 
-  // Bu dil bu site icin kapatilmissa (panelden), dogrudan linkle bile girilemez.
-  const enabledLocales = parseEnabledLocales(settings.enabledLocales);
-  if (!enabledLocales.includes(locale)) notFound();
-
-  return (
-    <html lang={htmlLang} dir={dir} className={manrope.variable}>
-      <body>
-        {children}
-        <JsonLd
-          data={{
-            "@context": "https://schema.org",
-            "@type": "ApartmentComplex",
-            name: site.name,
-            url: `${site.url}/${locale}`,
-            telephone: settings.phoneHref,
-            image: `${site.url}/og.jpg`,
-            address: {
-              "@type": "PostalAddress",
-              streetAddress: settings.addressStreet,
-              addressLocality: settings.addressDistrict,
-              addressRegion: settings.addressCity,
-              postalCode: settings.addressPostalCode,
-              addressCountry: "TR",
-            },
-          }}
-        />
-      </body>
-    </html>
-  );
+  return <RootDocument locale={locale}>{children}</RootDocument>;
 }

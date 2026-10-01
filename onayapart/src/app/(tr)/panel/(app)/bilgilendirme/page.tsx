@@ -15,6 +15,7 @@ import {
   sendBulkMessage,
   sendPaymentReminders,
 } from "@/features/messaging/actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function MessagingPage({
 }: {
   searchParams: { ok?: string; hata?: string; gonderildi?: string; hazir?: string };
 }) {
+  await requirePanel("bilgilendirme");
   const [templates, integration, guests, logs, remindable] = await Promise.all([
     prisma.messageTemplate.findMany({ orderBy: { sort: "asc" } }),
     getIntegrationSettings(),

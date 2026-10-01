@@ -1,21 +1,25 @@
 import { NextResponse } from "next/server";
+import { env } from "@/shared/lib/env";
+import { jsonError } from "@/shared/lib/http";
+import { safeEqual } from "@/features/auth/session";
 import { syncAllExternalCalendars } from "@/features/calendar-sync/sync";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 /**
- * Vercel Cron tarafindan otomatik cagrilir (vercel.json'daki schedule'a gore).
- * Vercel, cron isteklerine "Authorization: Bearer <CRON_SECRET>" basligini otomatik ekler;
- * CRON_SECRET ortam degiskeni tanimliysa burada dogrulanir. Tanimli degilse (yerel gelistirme)
- * kontrol atlanir.
+ * Booking.com/Airbnb takvimlerini topluca senkronize eder. Zamanlayici tarafindan
+ * "Authorization: Bearer <CRON_SECRET>" basligiyla cagrilir (Vercel Cron bunu
+ * kendiliginden ekler; kendi sunucunuzda cron/curl ile siz eklersiniz).
+ * Yayinda CRON_SECRET tanimli degilse uc nokta kapali kalir.
  */
 export async function GET(req: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
-    }
+  if (env.cronSecret) {
+    const provided = req.headers.get("authorization") ?? "";
+    if (!safeEqual(provided, `Bearer ${env.cronSecret}`)) return jsonError("Yetkisiz.", 401);
+  } else if (env.isProduction) {
+    return jsonError("CRON_SECRET tanımlı değil.", 503);
   }
 
-  const result = await syncAllExternalCalendars();
-  return NextResponse.json(result);
+  return NextResponse.json(await syncAllExternalCalendars());
 }

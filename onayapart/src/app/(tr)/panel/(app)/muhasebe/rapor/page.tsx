@@ -9,17 +9,19 @@ import MonthlyBarChart from "@/features/accounting/components/charts/MonthlyBarC
 import ExpenseDonut from "@/features/accounting/components/charts/ExpenseDonut";
 import MethodBars from "@/features/accounting/components/charts/MethodBars";
 import { deleteTransaction } from "@/features/accounting/actions";
+import { requirePanel } from "@/features/auth/guards";
+import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from "@/features/reservations/constants";
 
 export const dynamic = "force-dynamic";
 
 const ACCOUNT_TYPE_LABEL: Record<string, string> = { KASA: "Kasa", BANKA: "Banka / POS" };
-const METHOD_LABEL: Record<string, string> = { NAKIT: "Nakit", KART: "Kart", HAVALE: "Havale" };
 
 export default async function RaporPage({
   searchParams,
 }: {
   searchParams: { ok?: string; aralik?: string; bas?: string; bit?: string };
 }) {
+  await requirePanel("muhasebe");
   const now = new Date();
   const range = resolveRange(searchParams.aralik, searchParams.bas, searchParams.bit);
 

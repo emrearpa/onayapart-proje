@@ -1,4 +1,5 @@
-import { Availability, availabilityLabel } from "@/features/rooms/availability";
+import { getDictionary } from "@/shared/i18n/dictionaries";
+import type { Availability } from "@/features/rooms/availability";
 
 const styles: Record<Availability, string> = {
   MUSAIT: "bg-brand-50 text-brand-600",
@@ -8,10 +9,7 @@ const styles: Record<Availability, string> = {
   BAKIM: "bg-slate-100 text-slate-600",
 };
 
-export default function StatusBadge({ state, label }: { state: Availability; label?: string }) {
-  return (
-    <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ${styles[state]}`}>
-      {label ?? availabilityLabel[state]}
-    </span>
-  );
+/** `labels` verilmezse Turkce etiketler kullanilir (ceviri sayfalari sozlukten gecirir). */
+export default function StatusBadge({ state, labels = getDictionary().availability }: { state: Availability; labels?: Record<Availability, string> }) {
+  return <span className={`inline-block rounded-full px-2.5 py-1 text-[11px] font-bold ${styles[state]}`}>{labels[state]}</span>;
 }

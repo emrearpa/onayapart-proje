@@ -1,7 +1,11 @@
 import Link from "next/link";
+import type { Locale } from "@/shared/i18n/config";
+import { site } from "@/shared/lib/site";
+import { availabilityOf } from "@/features/rooms/availability";
+import { roomLabels } from "@/features/rooms/labels";
+import { roomPath } from "@/features/rooms/paths";
 import RoomPhoto, { placeholder } from "@/features/rooms/components/RoomPhoto";
 import StatusBadge from "@/features/rooms/components/StatusBadge";
-import { availabilityOf } from "@/features/rooms/availability";
 
 type Props = {
   room: {
@@ -9,43 +13,44 @@ type Props = {
     floor: number;
     m2: number;
     condition: string;
-    type: { code: string; slug: string; name: string; capacity: string };
+    type: { code: string; slug: string; capacity: string };
     photos: { url: string; alt: string }[];
     reservations: { checkIn: Date; checkOut: Date; status: string }[];
     externalBookings: { checkIn: Date; checkOut: Date }[];
   };
   priority?: boolean;
-  /** Ceviri site rotalari icin: /en/odalar/... gibi bir on ek ve "Room"/"floor" etiketleri. */
-  hrefPrefix?: string;
-  labels?: { room: string; floor: string };
+  /** Ceviri sayfalarinda verilir: adres /<dil>/odalar/... olur ve etiketler o dilde cikar. */
+  locale?: Locale;
 };
 
-export default function RoomCard({ room, priority, hrefPrefix = "", labels }: Props) {
+export default function RoomCard({ room, priority, locale }: Props) {
+  const labels = roomLabels(locale);
+  const title = `${labels.room} ${room.number}`;
   const state = availabilityOf(room.condition, room.reservations, new Date(), room.externalBookings);
   const photo = room.photos[0];
-  const src = photo?.url ?? placeholder(room.number, "Salon", room.number);
-  const alt =
-    photo?.alt ?? `Erzurum ${room.type.code} apart daire — ${room.number} numaralı odanın salonu`;
-  const roomLabel = labels?.room ?? "Oda";
-  const floorLabel = labels?.floor ?? ". kat";
 
   return (
     <Link
-      href={`${hrefPrefix}/odalar/${room.type.slug}/oda-${room.number}`}
+      href={`${locale ? `/${locale}` : ""}${roomPath(room)}`}
       className="group overflow-hidden rounded-2xl border border-line bg-white transition hover:-translate-y-1 hover:border-brand-300 hover:shadow-card"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-brand-800">
-        <RoomPhoto src={src} alt={alt} priority={priority} className="h-full w-full object-cover" />
+        <RoomPhoto
+          src={photo?.url ?? placeholder(title, room.type.code, room.number)}
+          alt={photo?.alt ?? `${site.shortName} ${room.type.code} — ${title}`}
+          priority={priority}
+        />
       </div>
       <div className="p-4">
         <div className="font-extrabold tracking-tight">
-          {roomLabel} {room.number} · {room.type.code}
+          {title} · {room.type.code}
         </div>
         <div className="mt-0.5 text-[13px] text-ink-soft">
-          {room.floor}{floorLabel} · {room.m2} m² · {room.type.capacity}
+          {room.floor}
+          {labels.floorSuffix} · {room.m2} m² · {room.type.capacity}
         </div>
         <div className="mt-2">
-          <StatusBadge state={state} />
+          <StatusBadge state={state} labels={labels.availability} />
         </div>
       </div>
     </Link>

@@ -3,7 +3,7 @@ import { locales, localeConfig } from "@/shared/i18n/config";
 type Field = { name: string; label: string; type?: "text" | "textarea"; rows?: number };
 
 /**
- * Herhangi bir panel formunun icine gomulebilen, 4 dilde (EN/AR/FA/RU) ceviri
+ * Herhangi bir panel formunun icine gomulebilen, desteklenen tum dillerde ceviri
  * girisi. Ayri bir <form> degil - ayni ust formun icinde render olur, her alan
  * `<locale>_<fieldName>` adiyla gelir (ornegin en_name, ar_description).
  * saveTranslationsFromForm() bu adlandirmayi bekler.
@@ -18,8 +18,7 @@ export default function TranslationFields({
   return (
     <details className="rounded-xl border border-line">
       <summary className="cursor-pointer select-none px-4 py-2.5 text-xs font-bold text-brand-600">
-        🌐 Diğer dillerdeki çeviriler (İngilizce / Arapça / Farsça / Rusça) — isteğe bağlı, boş bırakılırsa
-        Türkçesi gösterilir
+        🌐 Diğer dillerdeki çeviriler — isteğe bağlı, boş bırakılan dilde Türkçesi gösterilir
       </summary>
       <div className="space-y-5 border-t border-line p-4">
         {locales.map((locale) => (

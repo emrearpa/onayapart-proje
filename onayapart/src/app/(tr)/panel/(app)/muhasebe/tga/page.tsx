@@ -1,8 +1,11 @@
 import { prisma } from "@/shared/lib/db";
 import { fmtMoney, fmtDate } from "@/shared/lib/dates";
-import { computeMonthlyStats, tgaPayloadPreview } from "@/features/accounting/tga";
+import { buildTgaPayload, computeMonthlyStats } from "@/features/accounting/tga";
+import { getIntegrationSettings } from "@/features/integrations/settings";
+import { currentPeriodKey } from "@/features/reservations/queries";
 import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
 import { updateTgaSettings, sendTgaReportAction } from "@/features/accounting/tga-actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -16,18 +19,14 @@ const ERRORS: Record<string, string> = {
   hata: "Gönderim başarısız oldu, aşağıdaki geçmişten hata detayını görebilirsiniz.",
 };
 
-function currentMonthStr() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
 export default async function TgaPage({
   searchParams,
 }: {
   searchParams: { ok?: string; hata?: string; ay?: string };
 }) {
-  const settings = await prisma.integrationSetting.findUnique({ where: { id: "main" } });
-  const reportMonth = searchParams.ay && /^\d{4}-\d{2}$/.test(searchParams.ay) ? searchParams.ay : currentMonthStr();
+  await requirePanel("muhasebe");
+  const settings = await getIntegrationSettings();
+  const reportMonth = searchParams.ay && /^\d{4}-(0[1-9]|1[0-2])$/.test(searchParams.ay) ? searchParams.ay : currentPeriodKey();
   const [year, month] = reportMonth.split("-").map(Number);
 
   const [stats, submissions] = await Promise.all([
@@ -35,23 +34,8 @@ export default async function TgaPage({
     prisma.tgaSubmission.findMany({ orderBy: { reportMonth: "desc" }, take: 12 }),
   ]);
 
-  const tgaReady = Boolean(settings?.tgaEnabled && settings.tgaApiKey && settings.tgaFacilityId);
-  const preview = tgaReady
-    ? tgaPayloadPreview(
-        {
-          tgaApiKey: settings!.tgaApiKey,
-          tgaSandbox: settings!.tgaSandbox,
-          tgaFacilityId: settings!.tgaFacilityId,
-          tgaIlKodu: settings!.tgaIlKodu,
-          tgaIlceKodu: settings!.tgaIlceKodu,
-          tgaOdaSayisi: settings!.tgaOdaSayisi,
-          tgaYatakSayisi: settings!.tgaYatakSayisi,
-        },
-        reportMonth,
-        stats,
-        null
-      )
-    : null;
+  const tgaReady = Boolean(settings.tgaEnabled && settings.tgaApiKey && settings.tgaFacilityId);
+  const preview = tgaReady ? buildTgaPayload(settings, reportMonth, stats, null) : null;
 
   const alreadySent = submissions.find((s) => s.reportMonth === reportMonth && s.status === "GONDERILDI");
 
@@ -164,7 +148,7 @@ export default async function TgaPage({
         {alreadySent && (
           <p className="mb-4 rounded-xl bg-brand-50 p-3 text-xs font-semibold text-brand-700">
             Bu dönem daha önce {alreadySent.sentAt ? fmtDate(alreadySent.sentAt) : ""} tarihinde gönderilmiş. Tekrar
-            gönderirseniz TGA tarafında öncekinin yerine geçer (TGA'nın kendi kuralı).
+            gönderirseniz TGA tarafında öncekinin yerine geçer (TGA&apos;nın kendi kuralı).
           </p>
         )}
 

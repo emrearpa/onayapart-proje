@@ -3,92 +3,102 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/shared/lib/db";
+import { checked, optStr, positiveNum, str } from "@/shared/lib/form";
+import { requirePanel } from "@/features/auth/guards";
 import { logActivity } from "@/features/audit/activity-log";
+import { SITE_SETTINGS_ID } from "@/features/content/defaults";
+import { getSiteSettings } from "@/features/content/queries";
+import { deleteTranslations, saveTranslationsFromForm } from "@/features/content/translations";
 
-function revalidateMenu() {
-  revalidatePath("/panel/menu");
-  revalidatePath("/menu");
-  revalidatePath("/");
+const PAGE_PATH = "/panel/menu";
+
+function fail(reason: string): never {
+  redirect(`${PAGE_PATH}?hata=${reason}`);
+}
+
+/** Menu hem panelde hem sitede (ana sayfa, /menu, ceviri sayfalari, misafir paneli) gorunur. */
+function done(result: string): never {
+  revalidatePath("/", "layout");
+  redirect(`${PAGE_PATH}?ok=${result}`);
 }
 
 export async function createMenuCategory(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) redirect("/panel/menu?hata=kategori-eksik");
-  const count = await prisma.menuCategory.count();
-  const cat = await prisma.menuCategory.create({ data: { name, sort: count + 1 } });
+  await requirePanel("menu");
+  const name = str(formData, "name");
+  if (!name) fail("kategori-eksik");
 
-  const { saveTranslationsFromForm } = await import("@/features/content/translations");
-  await saveTranslationsFromForm("MenuCategory", cat.id, formData, ["name"]);
-
+  const category = await prisma.menuCategory.create({ data: { name, sort: (await prisma.menuCategory.count()) + 1 } });
+  await saveTranslationsFromForm("MenuCategory", category.id, formData, ["name"]);
   await logActivity("Menü kategorisi ekledi", name);
-  revalidateMenu();
-  redirect("/panel/menu?ok=kategori-eklendi");
+  done("kategori-eklendi");
 }
 
 export async function deleteMenuCategory(formData: FormData) {
-  const id = String(formData.get("id"));
-  const cat = await prisma.menuCategory.delete({ where: { id } });
-  await logActivity("Menü kategorisi sildi", cat.name);
-  revalidateMenu();
-  redirect("/panel/menu?ok=silindi");
+  await requirePanel("menu");
+  const category = await prisma.menuCategory.delete({ where: { id: str(formData, "id") }, include: { items: { select: { id: true } } } });
+  await Promise.all([
+    deleteTranslations("MenuCategory", category.id),
+    prisma.translation.deleteMany({ where: { modelName: "MenuItem", recordId: { in: category.items.map((i) => i.id) } } }),
+  ]);
+  await logActivity("Menü kategorisi sildi", category.name);
+  done("silindi");
 }
 
 export async function createMenuItem(formData: FormData) {
-  const categoryId = String(formData.get("categoryId"));
-  const name = String(formData.get("name") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim() || null;
-  const price = Number(formData.get("price") ?? 0);
+  await requirePanel("menu");
+  const categoryId = str(formData, "categoryId");
+  const name = str(formData, "name");
+  if (!name || !categoryId) fail("urun-eksik");
 
-  if (!name || !categoryId) redirect("/panel/menu?hata=urun-eksik");
-
-  const count = await prisma.menuItem.count({ where: { categoryId } });
   const item = await prisma.menuItem.create({
-    data: { categoryId, name, description, price: Number.isFinite(price) ? price : 0, sort: count + 1 },
+    data: {
+      categoryId,
+      name,
+      description: optStr(formData, "description"),
+      price: positiveNum(formData, "price"),
+      sort: (await prisma.menuItem.count({ where: { categoryId } })) + 1,
+    },
   });
-
-  const { saveTranslationsFromForm } = await import("@/features/content/translations");
   await saveTranslationsFromForm("MenuItem", item.id, formData, ["name", "description"]);
-
   await logActivity("Menü ürünü ekledi", name);
-  revalidateMenu();
-  redirect("/panel/menu?ok=urun-eklendi");
+  done("urun-eklendi");
 }
 
 export async function updateMenuItem(formData: FormData) {
-  const id = String(formData.get("id"));
-  const name = String(formData.get("name") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim() || null;
-  const price = Number(formData.get("price") ?? 0);
-  const isAvailable = formData.get("isAvailable") === "on";
-  const isDailySpecial = formData.get("isDailySpecial") === "on";
-
-  if (!name) redirect("/panel/menu?hata=urun-eksik");
+  await requirePanel("menu");
+  const id = str(formData, "id");
+  const name = str(formData, "name");
+  if (!name) fail("urun-eksik");
 
   await prisma.menuItem.update({
     where: { id },
-    data: { name, description, price: Number.isFinite(price) ? price : 0, isAvailable, isDailySpecial },
+    data: {
+      name,
+      description: optStr(formData, "description"),
+      price: positiveNum(formData, "price"),
+      isAvailable: checked(formData, "isAvailable"),
+      isDailySpecial: checked(formData, "isDailySpecial"),
+    },
   });
-
-  const { saveTranslationsFromForm } = await import("@/features/content/translations");
   await saveTranslationsFromForm("MenuItem", id, formData, ["name", "description"]);
-
-  revalidateMenu();
-  redirect("/panel/menu?ok=guncellendi");
+  done("guncellendi");
 }
 
 export async function deleteMenuItem(formData: FormData) {
-  const id = String(formData.get("id"));
-  const item = await prisma.menuItem.delete({ where: { id } });
+  await requirePanel("menu");
+  const item = await prisma.menuItem.delete({ where: { id: str(formData, "id") } });
+  await deleteTranslations("MenuItem", item.id);
   await logActivity("Menü ürünü sildi", item.name);
-  revalidateMenu();
-  redirect("/panel/menu?ok=silindi");
+  done("silindi");
 }
 
 /** Restoran/menu bolumunu sitede acar/kapatir - icerik silinmez, sadece gorunurluk degisir. */
 export async function updateMenuVisibility(formData: FormData) {
-  const menuEnabled = formData.get("menuEnabled") === "on";
-  await prisma.siteSetting.update({ where: { id: "main" }, data: { menuEnabled } });
+  await requirePanel("menu");
+  const menuEnabled = checked(formData, "menuEnabled");
+  await getSiteSettings(); // ayar satiri henuz yoksa olusturur
+  await prisma.siteSetting.update({ where: { id: SITE_SETTINGS_ID }, data: { menuEnabled } });
+
   await logActivity(menuEnabled ? "Restoran menüsünü siteye açtı" : "Restoran menüsünü siteden kapattı");
-  revalidateMenu();
-  redirect("/panel/menu?ok=gorunurluk");
+  done("gorunurluk");
 }

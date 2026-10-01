@@ -1,48 +1,37 @@
 import type { MetadataRoute } from "next";
 import { site } from "@/shared/lib/site";
-import { prisma } from "@/shared/lib/db";
-import { parseEnabledLocales } from "@/shared/i18n/config";
+import { getEnabledLocales, getSiteSettings } from "@/features/content/queries";
+import { dailyLanding } from "@/features/content/landing/daily";
+import { monthlyLanding } from "@/features/content/landing/monthly";
+import { studentLanding } from "@/features/content/landing/student";
+import { roomPath } from "@/features/rooms/paths";
+import { getPublishedRoomPaths } from "@/features/rooms/queries";
 
 export const revalidate = 3600;
 
+const LANDING_PATHS = [dailyLanding, monthlyLanding, studentLanding].map((page) => page.path);
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [types, rooms, settings] = await Promise.all([
-    prisma.roomType.findMany({ select: { slug: true } }),
-    prisma.room.findMany({ where: { isPublished: true }, select: { number: true, type: { select: { slug: true } } } }),
-    prisma.siteSetting.findUnique({ where: { id: "main" } }),
-  ]);
-  const enabledLocales = parseEnabledLocales(settings?.enabledLocales);
+  const [{ types, rooms }, locales, settings] = await Promise.all([getPublishedRoomPaths(), getEnabledLocales(), getSiteSettings()]);
 
-  const statics = [
-    "",
-    "/odalar",
-    "/gunluk-kiralik-apart-erzurum",
-    "/aylik-kiralik-apart-erzurum",
-    "/erzurum-ogrenci-apart",
-    "/sss",
-    "/iletisim",
-  ].map((p) => ({ url: `${site.url}${p}`, lastModified: new Date(), priority: p === "" ? 1 : 0.8 }));
-
-  const localePages = enabledLocales.flatMap((l) => [
-    { url: `${site.url}/${l}`, lastModified: new Date(), priority: 0.9 },
-    { url: `${site.url}/${l}/odalar`, lastModified: new Date(), priority: 0.8 },
-    { url: `${site.url}/${l}/gunluk-kiralik-apart-erzurum`, lastModified: new Date(), priority: 0.7 },
-    { url: `${site.url}/${l}/aylik-kiralik-apart-erzurum`, lastModified: new Date(), priority: 0.7 },
-    { url: `${site.url}/${l}/erzurum-ogrenci-apart`, lastModified: new Date(), priority: 0.7 },
-    { url: `${site.url}/${l}/sss`, lastModified: new Date(), priority: 0.6 },
-    { url: `${site.url}/${l}/iletisim`, lastModified: new Date(), priority: 0.6 },
-    { url: `${site.url}/${l}/menu`, lastModified: new Date(), priority: 0.6 },
-    ...types.map((t) => ({ url: `${site.url}/${l}/odalar/${t.slug}`, lastModified: new Date(), priority: 0.8 })),
-  ]);
-
-  return [
-    ...statics,
-    ...localePages,
-    ...types.map((t) => ({ url: `${site.url}/odalar/${t.slug}`, lastModified: new Date(), priority: 0.9 })),
-    ...rooms.map((r) => ({
-      url: `${site.url}/odalar/${r.type.slug}/oda-${r.number}`,
-      lastModified: new Date(),
-      priority: 0.7,
-    })),
+  // Yol -> oncelik. Her yol Turkce ve acik olan her dil icin birer kez listelenir.
+  const paths: [string, number][] = [
+    ["", 1],
+    ["/odalar", 0.9],
+    ...LANDING_PATHS.map((path): [string, number] => [path, 0.8]),
+    ["/sss", 0.6],
+    ["/iletisim", 0.6],
+    ...(settings.menuEnabled ? ([["/menu", 0.6]] as [string, number][]) : []),
+    ...types.map((type): [string, number] => [`/odalar/${type.slug}`, 0.9]),
+    ...rooms.map((room): [string, number] => [roomPath(room), 0.7]),
   ];
+
+  const lastModified = new Date();
+  return ["", ...locales.map((locale) => `/${locale}`)].flatMap((prefix) =>
+    paths.map(([path, priority]) => ({
+      url: `${site.url}${prefix}${path}`,
+      lastModified,
+      priority: prefix ? priority * 0.9 : priority,
+    }))
+  );
 }

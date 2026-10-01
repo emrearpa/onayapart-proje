@@ -1,8 +1,7 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { prisma } from "@/shared/lib/db";
 import { fmtDate } from "@/shared/lib/dates";
 import StatCard from "@/shared/components/panel/StatCard";
+import { requireAdmin } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +17,7 @@ export default async function ActivityLogPage({
 }: {
   searchParams: { aktor?: string; kisi?: string };
 }) {
-  // Hassas bir kayit - "Personel" yetkisi verilmis olsa bile sadece tam admin girer.
-  const isFullAdmin =
-    Boolean(cookies().get("oa_panel")?.value) && cookies().get("oa_panel")?.value === process.env.PANEL_PASSWORD;
-  if (!isFullAdmin) redirect("/panel");
-
+  await requireAdmin();
   const where = {
     ...(searchParams.aktor ? { actorType: searchParams.aktor } : {}),
     ...(searchParams.kisi ? { actorLabel: searchParams.kisi } : {}),

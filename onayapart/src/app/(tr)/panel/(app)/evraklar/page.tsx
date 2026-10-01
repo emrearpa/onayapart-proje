@@ -2,6 +2,7 @@ import { prisma } from "@/shared/lib/db";
 import { fmtDate } from "@/shared/lib/dates";
 import ConfirmButton from "@/shared/components/ConfirmButton";
 import { uploadCompanyDocument, deleteCompanyDocument, sendCompanyDocumentWhatsapp, sendCompanyDocumentEmail } from "@/features/documents/actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,8 @@ const MESSAGES: Record<string, string> = {
 };
 const ERRORS: Record<string, string> = {
   "evrak-eksik": "Başlık ve bir dosya (ya da dosya adresi) girmelisiniz.",
+  "evrak-buyuk": "Dosya çok büyük (en fazla 15 MB).",
+  "evrak-tur": "Bu dosya türü desteklenmiyor (PDF, JPG, PNG, WEBP, Word, Excel).",
   "telefon-eksik": "Bir telefon numarası girin.",
   "eposta-eksik": "Bir e-posta adresi girin.",
   "evrak-bulunamadi": "Evrak bulunamadı.",
@@ -25,6 +28,7 @@ export default async function CompanyDocumentsPage({
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("evraklar");
   const documents = await prisma.companyDocument.findMany({ orderBy: { uploadedAt: "desc" } });
 
   const today = new Date();

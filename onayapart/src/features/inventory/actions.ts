@@ -2,162 +2,146 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/shared/lib/db";
+import { isUniqueViolation, prisma } from "@/shared/lib/db";
+import { optStr, positiveNum, str } from "@/shared/lib/form";
+import { requirePanel } from "@/features/auth/guards";
 import { logActivity } from "@/features/audit/activity-log";
 
+// Stok dogrudan degistirilmez; her degisiklik bir hareket (GIRIS / TRANSFER / CIKIS)
+// olarak kaydedilir ve konum bazli miktar ayni islemde guncellenir.
+
+const PAGE_PATH = "/panel/envanter";
+
+function fail(reason: string): never {
+  redirect(`${PAGE_PATH}?hata=${reason}`);
+}
+
+function done(result: string): never {
+  revalidatePath("/panel", "layout");
+  redirect(`${PAGE_PATH}?ok=${result}`);
+}
+
+function readItemFields(formData: FormData) {
+  return {
+    name: str(formData, "name"),
+    category: str(formData, "category") || "DIGER",
+    unit: str(formData, "unit") || "adet",
+    minQuantity: positiveNum(formData, "minQuantity"),
+    note: optStr(formData, "note"),
+  };
+}
+
 export async function createInventoryItem(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const category = String(formData.get("category") ?? "DIGER");
-  const unit = String(formData.get("unit") ?? "adet").trim() || "adet";
-  const minQuantity = Number(formData.get("minQuantity") ?? 0);
-  const note = String(formData.get("note") ?? "").trim() || null;
+  await requirePanel("envanter");
+  const data = readItemFields(formData);
+  if (!data.name) fail("eksik");
 
-  if (!name) redirect("/panel/envanter?hata=eksik");
-
-  await prisma.inventoryItem.create({
-    data: { name, category, unit, minQuantity: Number.isFinite(minQuantity) ? minQuantity : 0, note },
-  });
-
-  await logActivity("Stok kalemi ekledi", name);
-  revalidatePath("/panel/envanter");
-  revalidatePath("/panel");
-  redirect("/panel/envanter?ok=eklendi");
+  await prisma.inventoryItem.create({ data });
+  await logActivity("Stok kalemi ekledi", data.name);
+  done("eklendi");
 }
 
 export async function updateInventoryItem(formData: FormData) {
-  const id = String(formData.get("id"));
-  const name = String(formData.get("name") ?? "").trim();
-  const category = String(formData.get("category") ?? "DIGER");
-  const unit = String(formData.get("unit") ?? "adet").trim() || "adet";
-  const minQuantity = Number(formData.get("minQuantity") ?? 0);
-  const note = String(formData.get("note") ?? "").trim() || null;
+  await requirePanel("envanter");
+  const data = readItemFields(formData);
+  if (!data.name) fail("eksik");
 
-  if (!name) redirect("/panel/envanter?hata=eksik");
-
-  await prisma.inventoryItem.update({
-    where: { id },
-    data: { name, category, unit, minQuantity: Number.isFinite(minQuantity) ? minQuantity : 0, note },
-  });
-
-  revalidatePath("/panel/envanter");
-  redirect("/panel/envanter?ok=guncellendi");
+  await prisma.inventoryItem.update({ where: { id: str(formData, "id") }, data });
+  done("guncellendi");
 }
 
 export async function deleteInventoryItem(formData: FormData) {
-  const id = String(formData.get("id"));
-  const item = await prisma.inventoryItem.delete({ where: { id } });
+  await requirePanel("envanter");
+  const item = await prisma.inventoryItem.delete({ where: { id: str(formData, "id") } });
   await logActivity("Stok kalemi sildi", item.name);
-  revalidatePath("/panel/envanter");
-  revalidatePath("/panel");
-  redirect("/panel/envanter?ok=silindi");
+  done("silindi");
 }
 
 export async function createLocation(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const type = String(formData.get("type") ?? "DIGER");
-  if (!name) redirect("/panel/envanter?hata=konum-eksik");
+  await requirePanel("envanter");
+  const name = str(formData, "name");
+  if (!name) fail("konum-eksik");
 
   try {
-    await prisma.inventoryLocation.create({ data: { name, type } });
-  } catch {
-    redirect("/panel/envanter?hata=konum-cakisma");
+    const count = await prisma.inventoryLocation.count();
+    await prisma.inventoryLocation.create({ data: { name, type: str(formData, "type") || "DEPO", sort: count + 1 } });
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+    fail("konum-cakisma");
   }
-  revalidatePath("/panel/envanter");
-  redirect("/panel/envanter?ok=konum-eklendi");
+  done("konum-eklendi");
 }
 
 /** Depoya (veya secilen konuma) satin alim/giris kaydi. */
 export async function recordStockIn(formData: FormData) {
-  const itemId = String(formData.get("itemId"));
-  const locationId = String(formData.get("locationId"));
-  const quantity = Number(formData.get("quantity") ?? 0);
-  const reason = String(formData.get("reason") ?? "").trim() || null;
-
-  if (!itemId || !locationId || !Number.isFinite(quantity) || quantity <= 0) {
-    redirect("/panel/envanter?hata=hareket-eksik");
-  }
+  await requirePanel("envanter");
+  const itemId = str(formData, "itemId");
+  const locationId = str(formData, "locationId");
+  const quantity = positiveNum(formData, "quantity");
+  if (!itemId || !locationId || !quantity) fail("hareket-eksik");
 
   await prisma.$transaction([
-    prisma.inventoryMovement.create({
-      data: { itemId, type: "GIRIS", quantity, reason, toLocationId: locationId },
-    }),
+    prisma.inventoryMovement.create({ data: { itemId, type: "GIRIS", quantity, reason: optStr(formData, "reason"), toLocationId: locationId } }),
     prisma.inventoryStock.upsert({
       where: { itemId_locationId: { itemId, locationId } },
       update: { quantity: { increment: quantity } },
       create: { itemId, locationId, quantity },
     }),
   ]);
+  done("hareket");
+}
 
-  revalidatePath("/panel/envanter");
-  redirect("/panel/envanter?ok=hareket");
+/**
+ * Kaynak konumdan stok duser. Yeterli stok kosulu guncelleme sorgusunun icindedir;
+ * ayni anda iki cikis yapilsa bile miktar eksiye dusmez. Stok yetmezse false doner.
+ */
+async function withdrawStock(
+  itemId: string,
+  fromLocationId: string,
+  quantity: number,
+  movement: { type: "TRANSFER" | "CIKIS"; toLocationId?: string; reason?: string | null; roomId?: string | null }
+): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const { count } = await tx.inventoryStock.updateMany({
+      where: { itemId, locationId: fromLocationId, quantity: { gte: quantity } },
+      data: { quantity: { decrement: quantity } },
+    });
+    if (count === 0) return false;
+
+    await tx.inventoryMovement.create({ data: { itemId, quantity, fromLocationId, ...movement } });
+    if (movement.toLocationId) {
+      await tx.inventoryStock.upsert({
+        where: { itemId_locationId: { itemId, locationId: movement.toLocationId } },
+        update: { quantity: { increment: quantity } },
+        create: { itemId, locationId: movement.toLocationId, quantity },
+      });
+    }
+    return true;
+  });
 }
 
 /** Bir konumdan digerine stok aktarimi (orn. Depo -> Kat Hizmetleri). */
 export async function transferStock(formData: FormData) {
-  const itemId = String(formData.get("itemId"));
-  const fromLocationId = String(formData.get("fromLocationId"));
-  const toLocationId = String(formData.get("toLocationId"));
-  const quantity = Number(formData.get("quantity") ?? 0);
+  await requirePanel("envanter");
+  const itemId = str(formData, "itemId");
+  const fromLocationId = str(formData, "fromLocationId");
+  const toLocationId = str(formData, "toLocationId");
+  const quantity = positiveNum(formData, "quantity");
+  if (!itemId || !fromLocationId || !toLocationId || fromLocationId === toLocationId || !quantity) fail("hareket-eksik");
 
-  if (!itemId || !fromLocationId || !toLocationId || fromLocationId === toLocationId || !Number.isFinite(quantity) || quantity <= 0) {
-    redirect("/panel/envanter?hata=hareket-eksik");
-  }
-
-  const fromStock = await prisma.inventoryStock.findUnique({
-    where: { itemId_locationId: { itemId, locationId: fromLocationId } },
-  });
-  if (!fromStock || fromStock.quantity < quantity) {
-    redirect("/panel/envanter?hata=stok-yetersiz");
-  }
-
-  await prisma.$transaction([
-    prisma.inventoryMovement.create({
-      data: { itemId, type: "TRANSFER", quantity, fromLocationId, toLocationId },
-    }),
-    prisma.inventoryStock.update({
-      where: { itemId_locationId: { itemId, locationId: fromLocationId } },
-      data: { quantity: { decrement: quantity } },
-    }),
-    prisma.inventoryStock.upsert({
-      where: { itemId_locationId: { itemId, locationId: toLocationId } },
-      update: { quantity: { increment: quantity } },
-      create: { itemId, locationId: toLocationId, quantity },
-    }),
-  ]);
-
-  revalidatePath("/panel/envanter");
-  redirect("/panel/envanter?ok=hareket");
+  if (!(await withdrawStock(itemId, fromLocationId, quantity, { type: "TRANSFER", toLocationId }))) fail("stok-yetersiz");
+  done("hareket");
 }
 
 /** Tuketim / cikis - genelde kat hizmetlerindeki stoktan malzeme kullanildiginda. */
 export async function recordStockOut(formData: FormData) {
-  const itemId = String(formData.get("itemId"));
-  const fromLocationId = String(formData.get("fromLocationId"));
-  const quantity = Number(formData.get("quantity") ?? 0);
-  const reason = String(formData.get("reason") ?? "").trim() || null;
-  const roomId = String(formData.get("roomId") ?? "") || null;
+  await requirePanel("envanter");
+  const itemId = str(formData, "itemId");
+  const fromLocationId = str(formData, "fromLocationId");
+  const quantity = positiveNum(formData, "quantity");
+  if (!itemId || !fromLocationId || !quantity) fail("hareket-eksik");
 
-  if (!itemId || !fromLocationId || !Number.isFinite(quantity) || quantity <= 0) {
-    redirect("/panel/envanter?hata=hareket-eksik");
-  }
-
-  const fromStock = await prisma.inventoryStock.findUnique({
-    where: { itemId_locationId: { itemId, locationId: fromLocationId } },
-  });
-  if (!fromStock || fromStock.quantity < quantity) {
-    redirect("/panel/envanter?hata=stok-yetersiz");
-  }
-
-  await prisma.$transaction([
-    prisma.inventoryMovement.create({
-      data: { itemId, type: "CIKIS", quantity, reason, roomId, fromLocationId },
-    }),
-    prisma.inventoryStock.update({
-      where: { itemId_locationId: { itemId, locationId: fromLocationId } },
-      data: { quantity: { decrement: quantity } },
-    }),
-  ]);
-
-  revalidatePath("/panel/envanter");
-  redirect("/panel/envanter?ok=hareket");
+  const movement = { type: "CIKIS" as const, reason: optStr(formData, "reason"), roomId: optStr(formData, "roomId") };
+  if (!(await withdrawStock(itemId, fromLocationId, quantity, movement))) fail("stok-yetersiz");
+  done("hareket");
 }

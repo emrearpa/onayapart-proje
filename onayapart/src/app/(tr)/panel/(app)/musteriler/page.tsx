@@ -3,10 +3,12 @@ import { prisma } from "@/shared/lib/db";
 import { fmtMoney, fmtDate } from "@/shared/lib/dates";
 import StatCard from "@/shared/components/panel/StatCard";
 import SearchBox from "@/shared/components/panel/SearchBox";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
 export default async function GuestsPage({ searchParams }: { searchParams: { q?: string } }) {
+  await requirePanel("musteriler");
   const q = (searchParams.q ?? "").trim().toLowerCase();
 
   const guests = await prisma.guest.findMany({

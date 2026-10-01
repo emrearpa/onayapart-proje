@@ -6,19 +6,21 @@ import ConfirmButton from "@/shared/components/ConfirmButton";
 import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
 import CategoryWithInventoryFields from "@/features/accounting/components/CategoryWithInventoryFields";
 import { createTransaction, deleteTransaction } from "@/features/accounting/actions";
+import { requirePanel } from "@/features/auth/guards";
+import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from "@/features/reservations/constants";
 
 export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {
   "kayit-eksik": "Başlık, tutar ve hesap seçimi zorunludur.",
 };
-const METHOD_LABEL: Record<string, string> = { NAKIT: "Nakit", KART: "Kart", HAVALE: "Havale" };
 
 export default async function IslemYapPage({
   searchParams,
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("muhasebe");
   const now = new Date();
   const [accounts, ledger, inventory] = await Promise.all([getAccounts(), getRecentLedger(10), getInventoryItemsWithStock()]);
   const manualToday = ledger.filter((l) => l.source === "MANUEL");

@@ -1,7 +1,7 @@
 import { fmtDate } from "@/shared/lib/dates";
 import type { LedgerEntry, StatementRow } from "@/features/accounting/queries";
+import { PAYMENT_METHOD_LABEL } from "@/features/reservations/constants";
 
-const METHOD_LABEL: Record<string, string> = { NAKIT: "Nakit", KART: "Kart", HAVALE: "Havale" };
 const TYPE_LABEL: Record<string, string> = { GELIR: "Gelir", GIDER: "Gider" };
 
 /** Turk Excel'i noktali virgul ayracı ve virgullu ondalik bekler. */
@@ -29,7 +29,7 @@ export function buildLedgerCsv(entries: LedgerEntry[]): string {
     e.title,
     e.category,
     e.accountName,
-    METHOD_LABEL[e.method] ?? e.method,
+    PAYMENT_METHOD_LABEL[e.method] ?? e.method,
     csvNumber(e.type === "GIDER" ? -e.amount : e.amount),
   ]);
 
@@ -56,7 +56,7 @@ export function buildStatementCsv(statement: {
     rows.push([
       fmtDate(r.date),
       r.title,
-      METHOD_LABEL[r.method] ?? r.method,
+      PAYMENT_METHOD_LABEL[r.method] ?? r.method,
       r.type === "GELIR" ? csvNumber(r.amount) : "",
       r.type === "GIDER" ? csvNumber(r.amount) : "",
       csvNumber(r.balance),

@@ -3,7 +3,7 @@ import { prisma } from "@/shared/lib/db";
 import { getDashboard, buildCalendar } from "@/features/dashboard/queries";
 import { getUpcomingPayments } from "@/features/reservations/queries";
 import { getDailyRevenue } from "@/features/accounting/queries";
-import { availabilityOf, availabilityLabel } from "@/features/rooms/availability";
+import { availabilityOf } from "@/features/rooms/availability";
 import StatusBadge from "@/features/rooms/components/StatusBadge";
 import { fmtMoney, fmtDate } from "@/shared/lib/dates";
 import { toggleKbs } from "@/features/reservations/actions";
@@ -13,6 +13,7 @@ import StatCard from "@/shared/components/panel/StatCard";
 import Icon from "@/shared/components/panel/Icon";
 import RevenueTrendChart from "@/features/accounting/components/charts/RevenueTrendChart";
 import DraggableCalendar from "@/features/reservations/components/DraggableCalendar";
+import { requireAdmin } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function PanelHome({
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requireAdmin();
   const { rooms, reservations, externalBookings, leads, openTasks, kpi, today, days } = await getDashboard(14);
   const pendingOrders = await prisma.roomServiceCharge.findMany({
     where: { status: "BEKLIYOR" },
@@ -229,7 +231,7 @@ export default async function PanelHome({
             <p className="text-sm text-ink-soft">Rezervasyon tahsilatları ve diğer gelirler birlikte.</p>
           </div>
           <Link href="/panel/muhasebe" className="text-xs font-bold text-brand-600">
-            Ön Muhasebe'ye git →
+            Ön Muhasebe&apos;ye git →
           </Link>
         </div>
         <div className="mt-3">
@@ -320,7 +322,7 @@ export default async function PanelHome({
         <div className="mt-4 flex flex-wrap gap-3 border-t border-line pt-3 text-[11px] text-ink-soft">
           {(["MUSAIT", "DOLU", "HARICI", "TEMIZLIK", "BAKIM"] as const).map((s) => (
             <span key={s} className="flex items-center gap-1.5">
-              <StatusBadge state={s} /> {availabilityLabel[s]}
+              <StatusBadge state={s} />
             </span>
           ))}
         </div>
@@ -372,7 +374,7 @@ export default async function PanelHome({
           <div className="p-5 pt-4">
             <p className="mb-4 text-sm text-ink-soft">
               Aylık/dönemlik/yıllık konaklaması olan ve ödeme günü yaklaşan veya geçen müşteriler. Ödeme alındığında
-              Rezervasyonlar ekranından tahsilatı kaydedin, ya da Bilgilendirme'den hatırlatma gönderin.
+              Rezervasyonlar ekranından tahsilatı kaydedin, ya da Bilgilendirme&apos;den hatırlatma gönderin.
             </p>
             <ul className="space-y-2">
               {upcomingPayments.map((p) => {

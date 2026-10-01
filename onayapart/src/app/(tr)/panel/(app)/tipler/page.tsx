@@ -4,6 +4,7 @@ import TranslationFields from "@/features/content/components/TranslationFields";
 import { getBatchRecordTranslations, type FieldTranslations } from "@/features/content/translations";
 import type { Locale } from "@/shared/i18n/config";
 import { createRoomType, updateRoomType, deleteRoomType } from "@/features/rooms/actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function RoomTypesPage({
 }: {
   searchParams: { ok?: string; hata?: string };
 }) {
+  await requirePanel("odalar");
   const types = await prisma.roomType.findMany({
     orderBy: { sort: "asc" },
     include: { _count: { select: { rooms: true } } },
@@ -188,7 +190,7 @@ function TypeForm({
       </div>
 
       <label className="text-xs font-bold sm:col-span-2">
-        SEO başlığı (Google'da görünür)
+        SEO başlığı (Google&apos;da görünür)
         <input name="seoTitle" defaultValue={type?.seoTitle} placeholder="Erzurum 1+1 Apart Daire" className="mt-1 w-full rounded-xl border border-line px-3 py-2.5 text-sm font-normal" />
       </label>
 

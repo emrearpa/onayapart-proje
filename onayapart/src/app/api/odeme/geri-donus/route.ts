@@ -1,51 +1,49 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/shared/lib/db";
+import { site } from "@/shared/lib/site";
 import { getIntegrationSettings } from "@/features/integrations/settings";
 import { retrieveCheckoutForm } from "@/features/payments/iyzico";
-import { site } from "@/shared/lib/site";
+
+const redirectTo = (query: string) => NextResponse.redirect(`${site.url}/musteri?${query}`, { status: 303 });
 
 /**
- * iyzico odeme tamamlandiktan sonra misafirin taraycisini bu adrese (POST) geri
+ * iyzico odeme tamamlandiktan sonra misafirin tarayicisini bu adrese (POST) geri
  * gonderir. Odeme sonucu ASLA bu yonlendirmeye guvenerek degil, token ile
- * iyzico'dan tekrar sorgulanarak dogrulanir - bu, sahtecilige karsi zorunlu bir adim.
+ * iyzico'dan tekrar sorgulanarak dogrulanir - sahtecilige karsi zorunlu bir adim.
  */
 export async function POST(req: Request) {
-  const form = await req.formData();
-  const token = String(form.get("token") ?? "");
-
-  const redirectTo = (path: string) => NextResponse.redirect(`${site.url}${path}`, { status: 303 });
-
-  if (!token) return redirectTo("/musteri?hata=odeme-token-yok");
+  const token = String((await req.formData()).get("token") ?? "");
+  if (!token) return redirectTo("hata=odeme-token-yok");
 
   const attempt = await prisma.onlinePaymentAttempt.findUnique({ where: { token } });
-  if (!attempt) return redirectTo("/musteri?hata=odeme-bulunamadi");
-
-  // Ayni odeme daha once basariyla isaretlendiyse tekrar Payment olusturma (cift tahsilat koruma).
-  if (attempt.status === "BASARILI") return redirectTo("/musteri?ok=odeme");
+  if (!attempt) return redirectTo("hata=odeme-bulunamadi");
+  if (attempt.status === "BASARILI") return redirectTo("ok=odeme");
 
   const settings = await getIntegrationSettings();
-  if (!settings.iyzicoApiKey || !settings.iyzicoSecretKey) return redirectTo("/musteri?hata=odeme-ayar-yok");
+  if (!settings.iyzicoApiKey || !settings.iyzicoSecretKey) return redirectTo("hata=odeme-ayar-yok");
 
-  const result = await retrieveCheckoutForm(
-    { iyzicoApiKey: settings.iyzicoApiKey, iyzicoSecretKey: settings.iyzicoSecretKey, iyzicoSandbox: settings.iyzicoSandbox },
-    token,
-    attempt.conversationId
-  );
+  const result = await retrieveCheckoutForm(settings, token, attempt.conversationId);
+  // Tahsil edilen tutar baslattigimiz tutardan az olamaz (taksit farki nedeniyle fazla olabilir).
+  const amountMatches = result.ok && Number(result.paidPrice ?? attempt.amount) >= attempt.amount - 0.01;
 
-  if (!result.ok || !result.paid) {
-    await prisma.onlinePaymentAttempt.update({
-      where: { token },
-      data: { status: "BASARISIZ", errorMessage: !result.ok ? result.error : "Ödeme tamamlanmadı.", completedAt: new Date() },
+  if (!result.ok || !result.paid || !amountMatches) {
+    await prisma.onlinePaymentAttempt.updateMany({
+      where: { token, status: "BEKLIYOR" },
+      data: { status: "BASARISIZ", errorMessage: result.ok ? "Ödeme tamamlanmadı." : result.error, completedAt: new Date() },
     });
-    return redirectTo("/musteri?hata=odeme-basarisiz");
+    return redirectTo("hata=odeme-basarisiz");
   }
 
-  await prisma.$transaction([
-    prisma.onlinePaymentAttempt.update({
-      where: { token },
-      data: { status: "BASARILI", iyzicoPaymentId: result.paymentId ?? null, completedAt: new Date() },
-    }),
-    prisma.payment.create({
+  // Cift tahsilat korumasi: deneme yalnizca BEKLIYOR/BASARISIZ durumundan bir kez
+  // BASARILI'ya gecer; ayni geri donus iki kez gelse de tek Payment olusur.
+  await prisma.$transaction(async (tx) => {
+    const { count } = await tx.onlinePaymentAttempt.updateMany({
+      where: { token, status: { not: "BASARILI" } },
+      data: { status: "BASARILI", iyzicoPaymentId: result.paymentId ?? null, errorMessage: null, completedAt: new Date() },
+    });
+    if (count === 0) return;
+
+    await tx.payment.create({
       data: {
         reservationId: attempt.reservationId,
         amount: attempt.amount,
@@ -53,8 +51,8 @@ export async function POST(req: Request) {
         accountId: settings.iyzicoDefaultAccountId ?? null,
         note: `Online ödeme (iyzico) — işlem no: ${result.paymentId ?? token}`,
       },
-    }),
-  ]);
+    });
+  });
 
-  return redirectTo("/musteri?ok=odeme");
+  return redirectTo("ok=odeme");
 }

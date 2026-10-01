@@ -13,6 +13,8 @@ import {
   type PdfCtx,
 } from "@/shared/lib/pdf-kit";
 import { fmtDate, fmtMoney } from "@/shared/lib/dates";
+import { ACCOUNT_TYPE_LABEL } from "@/features/accounting/constants";
+import { PAYMENT_METHODS } from "@/features/reservations/constants";
 
 const CONTENT_W_HALF = CONTENT_W / 2;
 
@@ -26,8 +28,6 @@ export type ReportInput = {
   monthlyReport: { label: string; income: number; expense: number; profit: number }[];
 };
 
-const METHOD_LABEL: Record<string, string> = { NAKIT: "Nakit", KART: "Kart", HAVALE: "Havale" };
-const ACCOUNT_TYPE_LABEL: Record<string, string> = { KASA: "Kasa", BANKA: "Banka / POS" };
 
 export async function generateReportPdf(input: ReportInput): Promise<Uint8Array> {
   const { rangeLabel, generatedAt, totals, incomeByMethod, expenseByCategory, accountSummaries, monthlyReport } = input;
@@ -52,7 +52,7 @@ export async function generateReportPdf(input: ReportInput): Promise<Uint8Array>
   drawTable(
     ctx,
     ["Yöntem", "Tutar"],
-    (["NAKIT", "KART", "HAVALE"] as const).map((m) => ({ cells: [METHOD_LABEL[m], fmtMoney(incomeByMethod[m] ?? 0)] })),
+    PAYMENT_METHODS.map((m) => ({ cells: [m.label, fmtMoney(incomeByMethod[m.key] ?? 0)] })),
     [CONTENT_W_HALF, CONTENT_W_HALF]
   );
 

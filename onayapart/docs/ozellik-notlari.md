@@ -1,3 +1,7 @@
+> **Not:** Bu belge, özelliklerin geliştirme sürecinde tutulmuş ayrıntılı notlarıdır ve tarihsel kayıt olarak saklanır.
+> Kurulum, klasör yapısı ve yayına alma için güncel kaynak kök dizindeki [README.md](../README.md) dosyasıdır;
+> ikisi çelişirse README geçerlidir (örn. giriş artık imzalı oturumla yapılır, misafir girişi telefon + kimlik no iledir).
+
 # Onay Apart Rezidans — onayapart.com
 
 Erzurum Yakutiye'deki Onay Apart Rezidans için tanıtım sitesi ve arka ofis (ERP) yönetim paneli.

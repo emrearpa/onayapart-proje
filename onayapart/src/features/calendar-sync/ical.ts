@@ -62,8 +62,10 @@ export function parseIcs(text: string): IcsEvent[] {
       continue;
     }
     if (line.startsWith("END:VEVENT")) {
-      if (inEvent && uid && start && end) {
-        events.push({ uid, start, end, summary });
+      if (inEvent && uid && start) {
+        // DTEND verilmemis tum-gun etkinlik standartta tek gun surer.
+        const fallbackEnd = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+        events.push({ uid, start, end: end && end > start ? end : fallbackEnd, summary });
       }
       inEvent = false;
       continue;

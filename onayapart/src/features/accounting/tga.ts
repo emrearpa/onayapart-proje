@@ -138,7 +138,9 @@ export type TgaSettings = {
   tgaYatakSayisi: number;
 };
 
-export type TgaSendResult = { ok: boolean; requestId?: string; error?: string };
+const TGA_URL = { sandbox: "https://test-tesis-entegrasyon.tga.gov.tr", live: "https://tesis-entegrasyon.tga.gov.tr" };
+
+export type TgaSendResult ={ ok: boolean; requestId?: string; error?: string };
 
 /** Hesaplanan aylik veriyi TGA API'sine gonderir. */
 export async function sendTgaReport(
@@ -147,29 +149,12 @@ export async function sendTgaReport(
   stats: TgaMonthlyData,
   aylikOrtalamaFiyat: number | null
 ): Promise<TgaSendResult> {
-  const baseUrl = settings.tgaSandbox
-    ? "https://test-tesis-entegrasyon.tga.gov.tr"
-    : "https://tesis-entegrasyon.tga.gov.tr";
-
-  const isClosed = stats.daysInMonth === 0;
-
-  const payload = {
-    id: settings.tgaFacilityId,
-    rapor_tarihi: reportMonth,
-    il_kodu: settings.tgaIlKodu,
-    ilce_kodu: settings.tgaIlceKodu,
-    oda_sayisi: settings.tgaOdaSayisi,
-    yatak_sayisi: settings.tgaYatakSayisi,
-    tesisin_aylik_acik_oldugu_gun_sayisi: stats.daysInMonth,
-    ...(aylikOrtalamaFiyat != null && !isClosed ? { aylik_ortalama_fiyat: aylikOrtalamaFiyat } : {}),
-    data: Object.entries(stats.byNationality).map(([iso_kodu, m]) => ({ iso_kodu, ...m })),
-  };
-
   try {
-    const res = await fetch(`${baseUrl}/tesis-aylik-rapor/`, {
+    const res = await fetch(`${settings.tgaSandbox ? TGA_URL.sandbox : TGA_URL.live}/tesis-aylik-rapor/`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-API-Key": settings.tgaApiKey },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(buildTgaPayload(settings, reportMonth, stats, aylikOrtalamaFiyat)),
+      signal: AbortSignal.timeout(20_000),
     });
 
     const json = await res.json().catch(() => null);
@@ -185,9 +170,10 @@ export async function sendTgaReport(
   }
 }
 
-export function tgaPayloadPreview(
-  settings: TgaSettings,
-  reportMonth: string,
+/** TGA'ya gidecek istek govdesi. Panel onizlemesi de ayni fonksiyonu kullanir; gosterilen ile gonderilen birebir aynidir. */
+export function buildTgaPayload(
+  settings: Omit<TgaSettings, "tgaApiKey" | "tgaSandbox">,
+  reportMonth: string, // "YYYY-MM"
   stats: TgaMonthlyData,
   aylikOrtalamaFiyat: number | null
 ) {
@@ -199,7 +185,7 @@ export function tgaPayloadPreview(
     oda_sayisi: settings.tgaOdaSayisi,
     yatak_sayisi: settings.tgaYatakSayisi,
     tesisin_aylik_acik_oldugu_gun_sayisi: stats.daysInMonth,
-    aylik_ortalama_fiyat: aylikOrtalamaFiyat,
+    ...(aylikOrtalamaFiyat != null ? { aylik_ortalama_fiyat: aylikOrtalamaFiyat } : {}),
     data: Object.entries(stats.byNationality).map(([iso_kodu, m]) => ({ iso_kodu, ...m })),
   };
 }

@@ -3,16 +3,18 @@ import { getAccounts, getAccountStatement } from "@/features/accounting/queries"
 import { resolveRange } from "@/features/accounting/date-range";
 import { fmtMoney, fmtDate, toInputDate } from "@/shared/lib/dates";
 import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
+import { requirePanel } from "@/features/auth/guards";
+import { PAYMENT_METHOD_LABEL as METHOD_LABEL } from "@/features/reservations/constants";
 
 export const dynamic = "force-dynamic";
 
-const METHOD_LABEL: Record<string, string> = { NAKIT: "Nakit", KART: "Kart", HAVALE: "Havale" };
 
 export default async function StatementPage({
   searchParams,
 }: {
   searchParams: { hesap?: string; aralik?: string; bas?: string; bit?: string };
 }) {
+  await requirePanel("muhasebe");
   const accounts = await getAccounts();
   const accountId = searchParams.hesap ?? accounts[0]?.id;
   const range = resolveRange(searchParams.aralik, searchParams.bas, searchParams.bit);

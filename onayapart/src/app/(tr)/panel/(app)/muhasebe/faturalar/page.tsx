@@ -4,6 +4,7 @@ import StatCard from "@/shared/components/panel/StatCard";
 import MuhasebeNav from "@/features/accounting/components/MuhasebeNav";
 import SearchBox from "@/shared/components/panel/SearchBox";
 import { markInvoiceIssued, markInvoicePending, createManualInvoiceRequest } from "@/features/accounting/actions";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: { ok?: string; hata?: string; q?: string };
 }) {
+  await requirePanel("muhasebe");
   const q = (searchParams.q ?? "").trim().toLowerCase();
 
   const [pendingInvoices, issuedInvoices, reservationsAll] = await Promise.all([

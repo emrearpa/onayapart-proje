@@ -1,8 +1,24 @@
-node_modules
-.next
-out
+# bagimliliklar ve derleme ciktilari
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# ortam degiskenleri ve gizli bilgiler
 .env
+.env*.local
+
+# calisma aninda uretilen veriler
+private-uploads/
 *.db
 *.db-journal
+
+# isletim sistemi / editor
 .DS_Store
-private-uploads
+Thumbs.db
+.vscode/
+.idea/
+
+# gunlukler
+npm-debug.log*

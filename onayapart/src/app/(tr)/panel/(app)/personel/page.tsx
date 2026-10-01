@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { prisma } from "@/shared/lib/db";
 import { getAccounts } from "@/features/accounting/queries";
 import { fmtDate, fmtMoney, toInputDate } from "@/shared/lib/dates";
 import { createEmployee, updateEmployeeStatus, paySalary } from "@/features/staff/actions";
 import SearchBox from "@/shared/components/panel/SearchBox";
+import { requirePanel } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export default async function StaffPage({
 }: {
   searchParams: { ok?: string; hata?: string; q?: string };
 }) {
+  const isFullAdmin = (await requirePanel("personel")).role === "admin";
   const q = (searchParams.q ?? "").trim().toLowerCase();
   const [employees, accounts] = await Promise.all([
     prisma.employee.findMany({
@@ -33,9 +34,6 @@ export default async function StaffPage({
   ]);
 
   const now = new Date();
-  const cookieStore = cookies();
-  const isFullAdmin =
-    Boolean(cookieStore.get("oa_panel")?.value) && cookieStore.get("oa_panel")?.value === process.env.PANEL_PASSWORD;
 
   return (
     <div>

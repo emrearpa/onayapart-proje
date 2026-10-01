@@ -2,22 +2,20 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { chartColors } from "@/features/accounting/components/chart-colors";
+import { fmtMoneyRounded } from "@/shared/lib/dates";
+import type { ChartTooltipProps } from "@/features/accounting/components/charts/tooltip";
 
 export type MonthlyPoint = { label: string; income: number; expense: number };
 
-function money(v: number) {
-  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(v);
-}
-
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-line bg-white px-3 py-2 text-xs shadow-card">
       <div className="mb-1 font-bold text-ink">{label}</div>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <div key={p.dataKey} className="flex items-center gap-1.5" style={{ color: p.color }}>
           <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-          {p.dataKey === "income" ? "Gelir" : "Gider"}: {money(p.value)}
+          {p.dataKey === "income" ? "Gelir" : "Gider"}: {fmtMoneyRounded(p.value)}
         </div>
       ))}
     </div>
