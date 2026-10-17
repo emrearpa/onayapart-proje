@@ -98,7 +98,7 @@ export default async function RoomDetailPage({
             genel sayfasının linkini içeren bir mesaj hazırlanır.
           </p>
         </div>
-        <form action={sendRoomInfoWhatsapp} target="_blank" className="flex flex-wrap items-end gap-2 p-5">
+        <form action={sendRoomInfoWhatsapp} className="flex flex-wrap items-end gap-2 p-5">
           <input type="hidden" name="roomId" value={room.id} />
           <label className="text-xs font-bold">
             Müşteri telefon numarası

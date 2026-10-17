@@ -64,6 +64,11 @@ export default async function LoginPage({ searchParams }: { searchParams: { hata
             <span className="block text-xs text-white/55">Rezervasyonunuza, bakiyenize ve WiFi bilginize buradan ulaşın</span>
           </span>
         </Link>
+
+        <Link href="/" className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-3 text-sm font-bold text-white/80 transition hover:border-white/30 hover:bg-white/5 hover:text-white">
+          <span aria-hidden>←</span>
+          Ana sayfaya dön
+        </Link>
       </div>
     </main>
   );

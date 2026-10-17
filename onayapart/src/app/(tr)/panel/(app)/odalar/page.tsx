@@ -248,7 +248,7 @@ export default async function RoomsAdminPage({
                   </form>
                 </td>
                 <td className="py-3">
-                  <form action={sendRoomInfoWhatsapp} target="_blank" className="flex items-center gap-1">
+                  <form action={sendRoomInfoWhatsapp} className="flex items-center gap-1">
                     <input type="hidden" name="roomId" value={r.id} />
                     <input type="hidden" name="back" value="/panel/odalar" />
                     <input

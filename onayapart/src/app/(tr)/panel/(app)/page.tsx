@@ -276,7 +276,7 @@ export default async function PanelHome({
                             {room.view || "Cephe girilmemiş"} · {room.m2} m² · {room.type.capacity}
                           </span>
                         </div>
-                        <form action={sendRoomInfoWhatsapp} target="_blank" className="mt-1.5 flex items-center gap-1">
+                        <form action={sendRoomInfoWhatsapp} className="mt-1.5 flex items-center gap-1">
                           <input type="hidden" name="roomId" value={room.id} />
                           <input type="hidden" name="back" value="/panel" />
                           <input

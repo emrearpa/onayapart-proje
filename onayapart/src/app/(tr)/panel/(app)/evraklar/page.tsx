@@ -142,7 +142,7 @@ export default async function CompanyDocumentsPage({
                     <td className="py-2.5 text-xs text-ink-soft">{fmtDate(d.uploadedAt)}</td>
                     <td className="py-2.5">
                       <div className="flex flex-col gap-1.5">
-                        <form action={sendCompanyDocumentWhatsapp} target="_blank" className="flex items-center gap-1">
+                        <form action={sendCompanyDocumentWhatsapp} className="flex items-center gap-1">
                           <input type="hidden" name="docId" value={d.id} />
                           <input name="phone" type="tel" placeholder="Telefon" className="w-24 rounded-lg border border-line px-2 py-1 text-[11px]" />
                           <button className="whitespace-nowrap rounded-lg bg-[#1f9d55] px-2 py-1 text-[10px] font-bold text-white">

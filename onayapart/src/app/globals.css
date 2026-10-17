@@ -7,11 +7,104 @@
 }
 
 html {
+  font-size: 17px;
   scroll-behavior: smooth;
 }
 
 body {
-  @apply bg-white text-ink antialiased;
+  @apply overflow-x-hidden bg-white text-ink antialiased;
+}
+
+@keyframes panel-content-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-aurora-drift-a {
+  0%, 100% { transform: translate3d(-6%, -4%, 0) scale(1); }
+  50% { transform: translate3d(12%, 8%, 0) scale(1.13); }
+}
+
+@keyframes hero-aurora-drift-b {
+  0%, 100% { transform: translate3d(8%, 4%, 0) scale(1.04); }
+  50% { transform: translate3d(-12%, -10%, 0) scale(.94); }
+}
+
+@keyframes hero-frame-glow {
+  0%, 100% { opacity: .22; transform: translate3d(-6%, 0, 0); }
+  50% { opacity: .48; transform: translate3d(8%, 0, 0); }
+}
+
+.hero-aurora {
+  background: linear-gradient(145deg, #f8fbf9 0%, #eef5f1 48%, #fffdf7 100%);
+}
+
+.hero-aurora-orb {
+  pointer-events: none;
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(4px);
+  will-change: transform;
+}
+
+.hero-aurora-orb-a {
+  top: -15rem;
+  left: -13rem;
+  width: 34rem;
+  height: 34rem;
+  background: radial-gradient(circle, rgba(78, 156, 118, .26) 0%, rgba(78, 156, 118, .08) 48%, transparent 70%);
+  animation: hero-aurora-drift-a 16s ease-in-out infinite;
+}
+
+.hero-aurora-orb-b {
+  right: -15rem;
+  top: -8rem;
+  width: 38rem;
+  height: 38rem;
+  background: radial-gradient(circle, rgba(201, 162, 39, .22) 0%, rgba(201, 162, 39, .06) 48%, transparent 70%);
+  animation: hero-aurora-drift-b 19s ease-in-out infinite;
+}
+
+.hero-aurora-orb-c {
+  right: 26%;
+  bottom: -18rem;
+  width: 30rem;
+  height: 30rem;
+  background: radial-gradient(circle, rgba(31, 109, 75, .14) 0%, transparent 68%);
+  animation: hero-aurora-drift-a 22s ease-in-out infinite reverse;
+}
+
+.hero-aurora-grid {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: .38;
+  background-image: linear-gradient(rgba(23, 80, 55, .055) 1px, transparent 1px), linear-gradient(90deg, rgba(23, 80, 55, .055) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(90deg, transparent, black 24%, black 76%, transparent);
+}
+
+.hero-media-frame {
+  position: relative;
+}
+
+.hero-media-frame::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 24%, rgba(255, 255, 255, .4) 48%, transparent 70%);
+  animation: hero-frame-glow 7s ease-in-out infinite;
+}
+
+.panel-content-enter {
+  animation: panel-content-enter 180ms ease-out both;
 }
 
 @layer components {
@@ -50,5 +143,14 @@ body {
   * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+
+  .panel-content-enter {
+    animation: none;
+  }
+
+  .hero-aurora-orb,
+  .hero-media-frame::after {
+    animation: none;
   }
 }

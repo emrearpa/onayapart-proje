@@ -22,25 +22,46 @@ const COLOR: Record<NavItem["color"], { chip: string; icon: string; activeChip: 
   rose: { chip: "bg-rose-400/20", icon: "text-rose-300", activeChip: "bg-rose-500", activeIcon: "text-white", activeText: "text-rose-800" },
 };
 
-export default function PanelNav({ groups }: { groups: NavItem[][] }) {
+export function isActiveNavItem(href: string, pathname: string) {
+  return href === "/panel" ? pathname === "/panel" : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export default function PanelNav({
+  groups,
+  className = "",
+  onNavigate,
+}: {
+  groups: NavItem[][];
+  className?: string;
+  onNavigate?: (href: string) => void;
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="mt-6 space-y-5">
+    <nav aria-label="Panel menüsü" className={`mt-6 space-y-5 ${className}`}>
       {groups.map((items, gi) => (
         <div key={gi} className="space-y-1">
           {items.map((n) => {
-            const active = n.href === "/panel" ? pathname === "/panel" : pathname.startsWith(n.href);
+            const active = isActiveNavItem(n.href, pathname);
             const c = COLOR[n.color];
             return (
               <Link
                 key={n.href}
                 href={n.href}
-                className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-semibold transition ${
-                  active ? "bg-white shadow-sm" : "text-brand-100 hover:bg-white/10 hover:text-white"
+                aria-current={active ? "page" : undefined}
+                onClick={(event) => {
+                  if (onNavigate && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+                    event.preventDefault();
+                    onNavigate(n.href);
+                  }
+                }}
+                className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-semibold transition duration-200 ${
+                  active
+                    ? "bg-white shadow-[0_8px_20px_-12px_rgba(0,0,0,.6)]"
+                    : "text-brand-100 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${active ? c.activeChip : c.chip}`}>
+                <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg transition ${active ? c.activeChip : `${c.chip} group-hover:scale-105`}`}>
                   <Icon name={n.icon} className={`h-4 w-4 ${active ? c.activeIcon : c.icon}`} />
                 </span>
                 <span className={active ? c.activeText : ""}>{n.label}</span>

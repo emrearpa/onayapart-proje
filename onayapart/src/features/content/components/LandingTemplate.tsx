@@ -8,9 +8,7 @@ import { faqJsonLd } from "@/features/content/structured-data";
 import LeadForm from "@/features/leads/components/LeadForm";
 import RoomCard from "@/features/rooms/components/RoomCard";
 import { getRooms } from "@/features/rooms/queries";
-import FloatingCta from "@/features/site/components/FloatingCta";
-import Footer from "@/features/site/components/Footer";
-import Header from "@/features/site/components/Header";
+import SiteShell from "@/features/site/components/SiteShell";
 
 const FEATURED_ROOM_COUNT = 4;
 
@@ -29,8 +27,7 @@ export default async function LandingTemplate({ page, locale }: { page: LandingP
   const roomsHref = `${locale ? `/${locale}` : ""}/odalar`;
 
   return (
-    <>
-      <Header locale={locale} />
+    <SiteShell locale={locale}>
       <main>
         <section className="border-b border-line bg-brand-50/60">
           <div className="container-page py-14">
@@ -103,9 +100,7 @@ export default async function LandingTemplate({ page, locale }: { page: LandingP
           </aside>
         </section>
       </main>
-      <Footer locale={locale} />
-      <FloatingCta />
       <JsonLd data={faqJsonLd(content.faqs.map((f) => ({ question: f.q, answer: f.a })))} />
-    </>
+    </SiteShell>
   );
 }

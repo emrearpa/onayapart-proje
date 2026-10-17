@@ -34,6 +34,7 @@ Panel: `http://localhost:3000/panel` — şifre `.env` içindeki `PANEL_PASSWORD
 
 | Değişken | Zorunlu | Açıklama |
 |---|---|---|
+| `POSTGRES_PASSWORD` | Docker kullanılıyorsa evet | Yerel Docker PostgreSQL konteynerinin parolası |
 | `DATABASE_URL` | evet | PostgreSQL bağlantısı |
 | `NEXT_PUBLIC_SITE_URL` | evet | Sitenin yayındaki tam adresi (`https://alanadiniz.com`, sonunda `/` yok) |
 | `PANEL_PASSWORD` | evet | Panel admin şifresi (en az 10 karakter). Değişince tüm oturumlar kapanır |

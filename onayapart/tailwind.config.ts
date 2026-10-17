@@ -33,7 +33,7 @@ const config: Config = {
       },
       fontFamily: { sans: ["var(--font-manrope)", "system-ui", "sans-serif"] },
       boxShadow: { card: "0 10px 30px rgba(12,51,36,.10)" },
-      maxWidth: { page: "1180px" },
+      maxWidth: { page: "1440px" },
     },
   },
   plugins: [],

@@ -18,7 +18,11 @@ type IconName =
   | "doc"
   | "inbox"
   | "key"
-  | "badge";
+  | "badge"
+  | "menu"
+  | "close"
+  | "external"
+  | "spinner";
 
 const paths: Record<IconName, React.ReactNode> = {
   occupancy: (
@@ -156,6 +160,24 @@ const paths: Record<IconName, React.ReactNode> = {
       <path d="M14.5 10h4M14.5 13.5h4" />
     </>
   ),
+  menu: (
+    <>
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </>
+  ),
+  close: (
+    <>
+      <path d="m6 6 12 12M18 6 6 18" />
+    </>
+  ),
+  external: (
+    <>
+      <path d="M14 5h5v5" />
+      <path d="m19 5-8 8" />
+      <path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+    </>
+  ),
+  spinner: <path d="M20 12a8 8 0 1 1-2.34-5.66" />,
 };
 
 export default function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: string }) {

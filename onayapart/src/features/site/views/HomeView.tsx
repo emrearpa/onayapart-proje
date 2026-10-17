@@ -34,7 +34,7 @@ async function getHero(locale?: Locale) {
 
 export async function homeMetadata(locale?: Locale): Promise<Metadata> {
   const [hero, alternates] = await Promise.all([getHero(locale), pageAlternates("/", locale)]);
-  return { title: { absolute: `${hero.heroTitle} | ${site.shortName}` }, description: hero.heroIntro, alternates };
+  return { title: { absolute: site.shortName }, description: hero.heroIntro, alternates };
 }
 
 export default async function HomeView({ locale }: { locale?: Locale }) {
@@ -65,14 +65,19 @@ export default async function HomeView({ locale }: { locale?: Locale }) {
   return (
     <SiteShell locale={locale}>
       <main>
-        <section className="border-b border-line bg-gradient-to-b from-brand-50 to-white">
-          <div className="container-page grid items-center gap-10 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-20">
+        <section className="hero-aurora relative overflow-hidden border-b border-line lg:flex lg:min-h-[calc(100dvh-5rem)] lg:items-center">
+          <div aria-hidden className="hero-aurora-orb hero-aurora-orb-a" />
+          <div aria-hidden className="hero-aurora-orb hero-aurora-orb-b" />
+          <div aria-hidden className="hero-aurora-orb hero-aurora-orb-c" />
+          <div aria-hidden className="hero-aurora-grid" />
+          <div aria-hidden className="absolute -right-20 top-20 h-64 w-64 rounded-full border border-brand-200/60" />
+          <div className="container-page relative grid w-full items-center gap-10 py-14 sm:py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
             <div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-4 py-1.5 text-xs font-bold text-brand-600">
+              <span className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/80 px-4 py-1.5 text-xs font-bold text-brand-700 shadow-sm backdrop-blur">
                 {hero.heroEyebrow}
               </span>
-              <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">{hero.heroTitle}</h1>
-              <p className="mt-4 max-w-[54ch] text-[17px] text-ink-soft">{hero.heroIntro}</p>
+              <h1 className="mt-5 max-w-[16ch] text-4xl font-extrabold leading-[1.06] tracking-tight sm:text-5xl lg:text-[3.45rem]">{hero.heroTitle}</h1>
+              <p className="mt-5 max-w-[55ch] text-[17px] leading-relaxed text-ink-soft">{hero.heroIntro}</p>
 
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link href={`${prefix}/odalar`} className="btn-primary">
@@ -93,12 +98,16 @@ export default async function HomeView({ locale }: { locale?: Locale }) {
               </dl>
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-line bg-white shadow-card">
-              <div className="relative grid aspect-[4/3] place-items-center bg-gradient-to-br from-brand-700 via-brand-500 to-brand-300 text-white">
+            <div className="hero-media-frame overflow-hidden rounded-[2rem] border border-white/70 bg-white shadow-[0_24px_60px_-28px_rgba(12,51,36,.38)]">
+              <div className="relative grid aspect-[4/3] place-items-center bg-[linear-gradient(135deg,#0c3324_0%,#175037_46%,#4e9c76_100%)] text-white">
                 {hero.heroImageUrl ? (
                   <SmartImage src={hero.heroImageUrl} alt={site.name} fill priority sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
                 ) : (
-                  <strong className="px-6 text-center text-2xl font-extrabold tracking-tight">{site.name}</strong>
+                  <div className="text-center">
+                    <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-white/20 bg-white/10 text-lg font-extrabold backdrop-blur">OA</span>
+                    <strong className="mt-4 block px-6 text-2xl font-extrabold tracking-tight">{site.name}</strong>
+                    <span className="mt-2 block text-xs font-semibold text-white/70">Konforlu konaklama · Erzurum</span>
+                  </div>
                 )}
               </div>
               <div className="flex justify-between gap-3 px-5 py-4 text-[13px] text-ink-soft">
